@@ -1,0 +1,23 @@
+Changelog
+130516: argh, apparently invisible() does not end execution like return does. Fixed.
+130515: also gave survwrapper a 'batch' option which causes it to output a list, be silent, and not do demog tables
+130513: made opsurv only emit '!' when verbose > 0; gave survwrapper a 'silent' option
+130425: documentation written for simsurv, plot.survomatic
+121218: removed everything that isn't going to be supported for the publication release; this may have broken some stuff
+121121: survsumm is now deprecated in favor of survsummng; in a future version it will be replaced by survsummng; ditto for plotsurv vs plotsurv2
+
+120318: Removed a few more references to surv2sample from code. Removed tcl2array(), survgui(), and go(). Documented the new main user function, survwrapper. 
+
+120125: surv2sample appears to no longer be maintained and not compatible with new versions of R due to lack of namespace. Dependency removed for now.
+120125: Minor tweak to survsumm, now the quiet option (FALSE by default) hides the summary.crq spam if set to TRUE
+
+111201: Incrementing minor version number because subsequent builds will be with a new version of R
+
+110625: A LOT of changes in the interval, but not committed to the repository yet, needs to be documented and cleaned up. A bug in the compiled version of zpprob was fixed that was giving incorrect results. Furthermore, discovered that the compiled version of zpprob wasn't being called in the first place, testing and fixing that.
+
+100321: replaced rq() with crq(), so censored data is now handled properly; completely reworked plot.crq.summary(); now literature references are printed with the summary report; improved the way in which the tcl objects that store the survival data get initialized; now the font size of the output window can be set via the options dialogue; new function called mledrv() can return a hessian, gradient, or standard error for a dataset given a model and a set of parameters but not yet incorporated into findpars() or smartpars() pending testing, and it only handles single models (one group) not joint models at the moment
+100316: version 1.2.4.10. smartpars(), a new wrapper for findpars() that reduces runtime and shows only the output most likely to be of interest. Now the default form in which survgui() prints mortality model fits, but it can be overridden from the command line by setting the smartpars argument to survgui() to FALSE. Fixed default arguments in tab2raw() so that it reads the WinModest format by default. survgui() can now load WinModest files directly. Adjusted the output box on survgui() so that it's tidier, especially for mortality model output. Fixed a few bugs in tidyfits() that were causing blank output when the input table didn't contain any parameter comparisons. Fixed the off-by-one header problem in output exported as tab delimited spreadsheets. NOTE: Until further notice, do NOT trust the quantile regression feature if your data is censored. I will soon integrate censored quantile regression into this package and will announce that when ready. The '?' button in the options dialog plots a list of symbols and the corresponding numeric codes that can be used for plotting survival curves.
+
+100217: tidyfits, new function to trim out rejected constrained and unconstrained models from the output table that findpards produces
+
+100217: ctrl and dex are now placed in the options upon load, so they don't clutter up the environment and risk accidental deletion.

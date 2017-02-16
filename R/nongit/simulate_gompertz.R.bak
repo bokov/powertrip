@@ -1,0 +1,223 @@
+#
+#
+#  Simulate from the Gompertz Distribution
+#
+#
+
+cdf.gomp <- function(x,a,b){
+	
+	return(1-exp(-a*(exp(b*x)-1)/b))
+	
+	}
+	
+
+cdf.gomp.opt <- function(x,a,b,p){
+	
+	return(1-p-exp(-a*(exp(b*x)-1)/b))
+	
+	}	
+	
+surv.gomp <- function(x,a,b){
+	
+	return(1-cdf.gomp(x,a,b))
+	
+	}	
+	
+	
+	
+x <- seq(0,10,length=1e3)
+
+plot(x,cdf.gomp(x,1,1))
+
+cdf.inv.gomp <- function(p,a,b){
+
+temp <- uniroot(cdf.gomp.opt,c(0,100),a,b,p)
+
+return(temp$root)
+
+}
+
+cdf.gomp(cdf.inv.gomp(0.5,1,1),1,1)
+
+
+
+sim.gomp <- function(n,a,b){
+	
+	x <- runif(n)
+	
+	y <- lapply(x,cdf.inv.gomp,a,b)
+	
+	
+	return(unlist(y))
+	
+	}  # end sim.gomp
+
+xg <- sim.gomp(100,1,04)
+
+hist(xg)
+
+fx <- sum(loglikelihood.gompertz(xg,1,4))
+
+
+#  Do gibbs
+
+mh.func <- function(x0,x1,l0,l1){
+	
+	if(l1>l0){return(x1)}
+	
+	return(ifelse(rbinom(1,1,exp(l1-l0)),x1,x0))
+	
+	
+	} # END:  mh.function
+	
+	
+mhprop.func <- function(x0,x1,p0,p1,l0,l1){
+	
+	ratio <- l1-p1-l0+p0
+	
+	if(ratio>0){return(x1)}
+	
+	return(ifelse(rbinom(1,1,exp(ratio)),x1,x0))
+	
+	} # END:  mhprop.function
+	
+	a <- 0.5
+	b <- 1
+	
+cycles <- 10000
+
+params <- matrix(NA,cycles,2)
+
+for(i in 1:cycles){
+	
+		params[i,1] <- a
+		params[i,2] <- b
+		
+		atest <- a + rnorm(1,sd=0.1)
+		
+		l0 <- loglikelihood.gompertz(xg,b,a)
+		l1 <- loglikelihood.gompertz(xg,b,atest)
+		
+		a <- mh.func(a,atest,l0,l1)
+	
+		btest <- b + rnorm(1,sd=0.1)
+		
+		l0 <- loglikelihood.gompertz(xg,b,a)
+		l1 <- loglikelihood.gompertz(xg,btest,a)
+		
+		b <- mh.func(b,btest,l0,l1)
+	
+	
+	
+	
+	}
+
+plot(params[floor(cycles/2):cycles,1],type="l")
+
+plot(params,type="l")
+
+library(coda)
+
+plot(as.mcmc(params))
+
+plot(params,type="l")
+
+
+# Simulate Competing Risks
+
+
+t1 <- sim.gomp(1e4,1,04)
+t2 <- sim.gomp(1e4,0.8,04)
+
+tcomp <- ifelse(t1<t2,t1,t2)
+tc2 <- pmin(t1,t2)
+
+indicator <- (t1>t2) + 1
+
+
+
+plot(t1,t2)
+
+library(Survomatic)
+
+data(demo1,demo2)
+
+survgui(demo1,demo2)
+
+
+
+
+d <- demog(demo1)
+
+
+plot(d$time,d$lx,type="l")
+
+parfit <- findpars(demo1,demo2)
+
+a <- parfit["Gompertz","a1"]
+
+b <- parfit["Gompertz","b1"]
+
+lines(1:60,srvshp(1:60,a,b),col=2)
+
+
+
+a <- parfit["Weibull","a1"]
+
+b <- parfit["Weibull","b1"]
+
+lines(1:60,srvshp(1:60,a,b,model="w"),col="blue")
+
+mlepars <- findpars(demo1)
+
+out <- mledrv(demo1,pars=c(a,b))
+
+plot(d[,1],log(d$ux),type="l")
+
+
+xg <- demo1
+
+	a <- 0.1
+	b <- 0.1
+	
+cycles <- 10000
+
+params <- matrix(NA,cycles,2)
+
+for(i in 1:cycles){
+	
+		params[i,1] <- a
+		params[i,2] <- b
+		
+		atest <- a + rnorm(1,sd=0.0001)
+		
+		l0 <- loglikelihood.gompertz(xg,b,a)
+		l1 <- loglikelihood.gompertz(xg,b,atest)
+		
+		a <- mh.func(a,atest,l0,l1)
+	
+		btest <- b + rnorm(1,sd=0.01)
+		
+		l0 <- loglikelihood.gompertz(xg,b,a)
+		l1 <- loglikelihood.gompertz(xg,btest,a)
+		
+		b <- mh.func(b,btest,l0,l1)
+	
+	
+	
+	
+	}
+
+plot(params[floor(cycles/2):cycles,],type="l")
+
+colMeans(params[floor(cycles/2):cycles,])
+
+thindat <- params[floor(cycles/2):cycles,]
+
+apply(thindat,2,sd)
+
+
+
+
+
+

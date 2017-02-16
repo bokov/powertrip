@@ -1,0 +1,10 @@
+Plans
+* Document these short functions: checkcons;gmean;smoother;weibhaz;srvhaz;srvshp;summary.survomatic;rlgst;print.survomatic;plot.survomatic;modelinfo;rlogmake;
+* Finish documentation on these longer functions: cpars; demog; fitmods; fixpar; modpars; objf; opsurv; sigmods; simsurv; survwrapper; tab2raw;
+* Figure out why quantile regression vertical scale doesn't cover the fruitfly data adequately.
+* DONE Make a plot function and button for fitted models.
+* DONE Enable resampling in survgui()
+* DONE replace rq with crq
+* DONE Integrate SEM estimates into findpars
+* DONE Rewrite findpars to be more dynamic
+
