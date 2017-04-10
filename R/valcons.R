@@ -9,7 +9,7 @@ valcons <- function(cons,groups,model,customrows){
   if(ngrp==1) return(matrix(
        cumsum(modparsng(rep(1,4),min='lm',mout=model)),ncol=1,
        dimnames=list(modparsng(c('a','b','c','s'),min='lm',mout=model),groups)));
-  if(!is.matrix(cons)&is.numeric(cons)) {
+  if(!is.matrix(cons)) {
     cons <- t(sapply(as.logical(cons),function(ii) if(ii) seq(1,ngrp) else rep(1,ngrp)));
   }
   nr <- nrow(cons);

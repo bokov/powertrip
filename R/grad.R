@@ -430,7 +430,7 @@ envsetup <- function(frm,data,cons,model,lb=c(1e-14,0,0,0),ub=c(.5,.5,.5,.5),log
   if(class(frm)[1]=='call') frm <- eval(frm);
   if(class(frm)[1]=='formula'){
     oo <- model.frame(frm,data); if(ncol(oo)==1) oo$X<-1;
-    oo <- split(oo[,1],oo[,-1]);
+    oo <- split(oo[,1,drop=F],oo[,-1]);
     if(all(cons)){
       ## If it's a fully unconstrained model, don't bother with the general stuff, just split it
       mvars<-modelinfo(model,'vars'); mlen<-length(mvars); mseq<-setNames(seq_along(mvars),mvars);
@@ -520,9 +520,9 @@ objfng <- function(pars,env){
                                                  b=as.double(pars[idx[2]]),
                                                  c=as.double(if(is.na(idx[3])) 0 else pars[idx[3]]),
                                                  d=as.double(if(is.na(idx[4])) 0 else pars[idx[4]]),
-                                                 x = as.integer(srv[,1]),
+                                                 x = as.integer(srv[,1][,1]), # am I breaking something else by doing this?
                                                  size = as.integer(size),
-                                                 cens = as.integer(srv[,2]),
+                                                 cens = as.integer(srv[,1][,2]), # am I breaking something else by doing this?
                                                  ans = double(1),
                                                  PACKAGE = "Survomatic")$ans)}));
 }
