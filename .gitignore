@@ -34,3 +34,7 @@ vignettes/*.pdf
 
 # C files
 src/*.*o
+.Rproj.user
+.Rbuildignore
+local
+powertrip.Rproj

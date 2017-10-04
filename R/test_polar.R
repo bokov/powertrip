@@ -55,12 +55,33 @@ pol2crt <- function(pp,center=if('center'%in%names(attributes(pp))) as.numeric(a
 #' ### Here we try it
 #' 
 #' Sample from a polar space immediately converting to cartesian
-sampled<-pol2crt(cbind(r=runif(1000,-4,4),theta=runif(100,-pi/2,pi/2)));
+spol<-cbind(r=runif(1000,0,4),theta=runif(1000,0,2.5*pi));
 #' generate binomial outcomes (we are going to look for the 0.8 contour)
-sampled<-cbind(sampled,res=apply(sampled,1,function(zz) gen_binom(zz[1],zz[2])));
+spol<-cbind(spol,res=apply(pol2crt(spol),1,function(zz) gen_binom(zz[1],zz[2])));
 #' Fit a model
-prmod <- glm(res~x*y,data.frame(sampled),family='binomial');
-sampled0 <- pol2crt(cbind(r=runif(1000,-4,4),theta=runif(100,-pi/2,pi/2)));
-sampled0 <- sampled0[with(predict(update(prmod,data=data.frame(sampled)),data.frame(sampled0),type='response',se.fit=T),which(abs(.GlobalEnv$.dbg<-(fit-0.2))<0.1&se.fit>quantile(se.fit,.5))),];
-sampled <- rbind(sampled,cbind(sampled0,res=apply(sampled0,1,function(zz) gen_binom(zz[1],zz[2]))));
-plot(sampled,pch='.');
+prmod <- glm(res~r*sin(theta),data.frame(spol),family='binomial');
+#' The following parts get repeated many times
+spol0 <- cbind(r=runif(1000,0,4),theta=runif(1000,0,2.5*pi));
+spol0 <- spol0[
+  with(predict(
+    update(prmod,data=data.frame(spol))
+    ,data.frame(spol0),type='response',se.fit=T)
+    ,{
+      prs <- abs(fit-0.2)^3/se.fit;
+      #prs <- abs(fit-0.2);
+      which(prs<quantile(prs,.01));
+      }),];
+spol <- rbind(spol,cbind(spol0,res=apply(pol2crt(spol0),1,function(zz) gen_binom(zz[1],zz[2]))));
+#' End repeat/update part
+#' 
+#' Below are the visualizations that can be done on any iteration
+plot(spol[,-3],pch='.',col='#00000030',xlim=c(1.5,2.5));
+points(spol0,pch='.',col='red');
+#' How good is the fitted contour?
+bar <-abs(predict(update(prmod),type='response')-0.2);
+foo<-pol2crt(spol[which(bar<quantile(bar,.1)),-3]);plot(foo,pch='.',col='#00000099');dim(foo);
+#' Run the following once only after the first few iteration, for reference
+# bar.bak <- bar; foo.bak <- foo;
+points(foo.bak,col='red',pch='+');
+#' How does this look on polar coordinates?
+plot(spol[which(bar.bak<quantile(bar.bak,.1)),-3],col='red');points(spol[which(bar<quantile(bar,.1)),-3]);
