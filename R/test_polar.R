@@ -119,14 +119,15 @@ for(ii in 10000){
   rownames(newsmp$scrt) <- apply(newsmp$scrt,1
                                  ,function(xx) paste0(c('_',xx),collapse='_'));
   data <- sapply(rownames(newsmp$scrt)
-                 ,function(ii) ptsim_binom(newsmp$scrt[ii,]),simplify=F);
+                 ,function(ii) ptsim_binom(newsmp$scrt[ii,])
+                 ,simplify=F);
   outcome<-c();
   for(ii in names(data)) {
     logenv[[ii]]<-ptpnl_passthru(data[[ii]],coords=newsmp$scrt[ii,]);
   }
   #spol <- rbind(spol,cbind(newsmp$spol,res=apply(newsmp$scrt,1,function(zz) gen_binom(zz[1],zz[2]))));
   spol <- rbind(spol,cbind(newsmp$spol
-                           ,res=sapply(names(data),function(xx) logenv[[xx]]$outcome)))
+                           ,res=sapply(names(data),function(xx) logenv[[xx]]$outcome[1])))
 }
 #spol0 <- cbind(r=runif(1000,0,3),theta=runif(1000,0,2.5*pi));
 #scrt0 <- pol2crt(spol0,center=ctr);
