@@ -107,7 +107,7 @@ spol<-cbind(spol,res=apply(pol2crt(spol,center = ctr),1,function(zz) gen_binom(z
 prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
 logenv <- new.env();
 #' The following parts get repeated many times
-for(ii in 10000){
+for(ii in 100000){
   newsmp <- sample_polar(rmax=4,maxes=maxes,mins=mins,center=ctr);
   bestfit <- with(predict(
     update(prmod,data=data.frame(spol))
@@ -138,15 +138,15 @@ for(ii in 10000){
 #' 
 #' Below are the visualizations that can be done on any iteration
 plot(spol[,-3],pch='.',col='#00000050'); #,xlim=c(1.5,2.5));
-points(newsmp$spol,pch='.',col='red');
+points(newsmp$spol,pch='+',col='red');
 #' How good is the fitted contour?
 bar <-abs(predict(update(prmod),type='response')-0.2);
-foo<-pol2crt(spol[which(bar<0.02),-3],center=ctr);plot(foo,pch='.',col='#00000099');dim(foo);
+foo<-pol2crt(spol[which(bar<0.01),-3],center=ctr);plot(foo,pch='.',col='#00000099');dim(foo);
 #' Run the following once only after the first few iteration, for reference
 # bar.bak <- bar; foo.bak <- foo;
 points(foo.bak,col='red',pch='+');
 #' How does this look on polar coordinates?
-plot(spol[which(bar.bak<quantile(bar.bak,.1)),-3],col='red',xlim=range(spol[,1]),ylim=range(spol[,2]));
+plot(spol[which(bar.bak<quantile(bar.bak,.1)),-3],pch='+',col='red',xlim=range(spol[,1]),ylim=range(spol[,2]));
 points(spol[which(bar<quantile(bar,.1)),-3]);
 #' Note: if the distribution is not logistic, so far it's in a way
 #' that does not cause it to be zero-inflated, overdispersed, or 
