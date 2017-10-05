@@ -14,7 +14,7 @@
 #' @param xx numeric, the closer to 0, the more likely to return 1
 #' @param yy numeric, the closer to 0, the more likely to return 1
 gen_binom<-function(xx,yy){
-  rbinom(1,1,mvtnorm::dmvnorm(c(xx,yy))/mvtnorm::dmvnorm(c(0,0)))
+  rbinom(1,1,mvtnorm::dmvnorm(c(xx,yy))/mvtnorm::dmvnorm(c(0,0)));
 }
 
 ## convert cartesian to polar coordinates
@@ -46,9 +46,9 @@ crt2pol <- function(xx,center=kmeans(xx,1)$centers,sort=c('angle','radius','none
 
 ## convert polar coordinates back to cartesian
 ## returns a matrix of same dimension
-pol2crt <- function(pp
+pol2crt.old <- function(pp
                     ,center=if('center'%in%names(attributes(pp))) as.numeric(attr(pp,'center')) else rep(0,len=ncol(pp))
-                    ,maxes=Inf,mins=-Inf,denom=2
+                    #,maxes=Inf,mins=-Inf,denom=2
                     ){
   ## pp = polar coordinate matrix [r,theta]
   ## center = point on which the cartesian result should be centered
@@ -64,6 +64,23 @@ pol2crt <- function(pp
   # }
   oo;
 }
+
+pol2crt <- function(coords,center=0,names){
+  # Try to save some effort by accepting both matrices and vectors
+  if(isTRUE(nrow(coords)>0)) {
+    thisfun <- match.fun(as.character(sys.call()[1]));
+    return(t(apply(coords,1,thisfun
+              ,center=center,names=names)));
+    } else {
+      # we assume that the first coordinate is the radial one
+      if(missing(names)) names<-make.names(seq_along(coords));
+      setNames(coords[1] * 
+                 # the rest are assumed to be thetas
+                 c(cos(coords[-1]),1) *
+                 cumprod(c(1,sin(coords[-1]))) + 
+                 center,names);
+    }
+  }
 
 sample_polar <- function(nn=1000,rmax=3,thetawrap=0.5
                          ,ntheta=1,center=c(0,0),maxes,mins){
@@ -88,21 +105,34 @@ spol<-sample_polar(rmax=4,maxes=maxes,mins=mins,center=ctr)$spol;
 spol<-cbind(spol,res=apply(pol2crt(spol,center = ctr),1,function(zz) gen_binom(zz[1],zz[2])));
 #' Fit a model
 prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
+logenv <- new.env();
 #' The following parts get repeated many times
-newsmp <- sample_polar(rmax=4,maxes=maxes,mins=mins,center=ctr);
+for(ii in 10000){
+  newsmp <- sample_polar(rmax=4,maxes=maxes,mins=mins,center=ctr);
+  bestfit <- with(predict(
+    update(prmod,data=data.frame(spol))
+    ,data.frame(newsmp$spol),type='response',se.fit=T)
+    ,{prs <- abs(fit-0.2)^2/se.fit;
+    #prs <- abs(fit-0.2);
+    which(prs<quantile(prs,.15));});
+  newsmp <- sapply(newsmp,function(xx) xx[bestfit,],simplify=F);
+  rownames(newsmp$scrt) <- apply(newsmp$scrt,1
+                                 ,function(xx) paste0(c('_',xx),collapse='_'));
+  data <- sapply(rownames(newsmp$scrt)
+                 ,function(ii) ptsim_binom(newsmp$scrt[ii,]),simplify=F);
+  outcome<-c();
+  for(ii in names(data)) {
+    logenv[[ii]]<-ptpnl_passthru(data[[ii]],coords=newsmp$scrt[ii,]);
+  }
+  #spol <- rbind(spol,cbind(newsmp$spol,res=apply(newsmp$scrt,1,function(zz) gen_binom(zz[1],zz[2]))));
+  spol <- rbind(spol,cbind(newsmp$spol
+                           ,res=sapply(names(data),function(xx) logenv[[xx]]$outcome)))
+}
 #spol0 <- cbind(r=runif(1000,0,3),theta=runif(1000,0,2.5*pi));
 #scrt0 <- pol2crt(spol0,center=ctr);
 #oor <- apply(scrt0,1,function(xx) any(xx>maxes)||any(xx<mins));
 #scrt0 <- scrt0[!oor,]; spol0 <- spol0[!oor,];
-bestfit <- with(predict(
-  update(prmod,data=data.frame(spol))
-  ,data.frame(newsmp$spol),type='response',se.fit=T)
-  ,{prs <- abs(fit-0.2)^3/se.fit;
-    #prs <- abs(fit-0.2);
-    which(prs<quantile(prs,.05));});
-newsmp <- sapply(newsmp,function(xx) xx[bestfit,],simplify=F);
 #spol <- spol[bestfit,]; scrt0 <- scrt0[bestfit,];
-spol <- rbind(spol,cbind(newsmp$spol,res=apply(newsmp$scrt,1,function(zz) gen_binom(zz[1],zz[2]))));
 #' End repeat/update part
 #' 
 #' Below are the visualizations that can be done on any iteration
@@ -110,7 +140,7 @@ plot(spol[,-3],pch='.',col='#00000050'); #,xlim=c(1.5,2.5));
 points(newsmp$spol,pch='.',col='red');
 #' How good is the fitted contour?
 bar <-abs(predict(update(prmod),type='response')-0.2);
-foo<-pol2crt(spol[which(bar<0.01),-3,drop=F],center=ctr);plot(foo,pch='.',col='#00000099');dim(foo);
+foo<-pol2crt(spol[which(bar<0.02),-3],center=ctr);plot(foo,pch='.',col='#00000099');dim(foo);
 #' Run the following once only after the first few iteration, for reference
 # bar.bak <- bar; foo.bak <- foo;
 points(foo.bak,col='red',pch='+');
