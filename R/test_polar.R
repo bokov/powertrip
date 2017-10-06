@@ -4,6 +4,21 @@
 #' date: "10/03/2017"
 #' ---
 
+#' Rescale cartesian parameters to span the space 
+#' between maxs and mins (both of them vectors equal to
+#' number of dimensions over which we are simulating)
+#' xx is a matrix of cartesian coordinates with as many
+#' columns as there are dimensions
+#' Apparently we should just leave the ctr parameter alone
+rescale <- function(xx,maxs=0,mins=0,ctr=(maxs+mins)/2,smaxs=1,smins=-1,sctr=0){
+  sranges <- smaxs - smins;
+  ranges <- maxs - mins;
+  # first we center and scale to unit circle (cartesian)
+  # then by multiplying by ranges and subtracting ctr we get
+  # it to the new scale and center
+  oo <- t(apply(xx,1,function(zz) ranges*(zz - sctr)/sranges+ctr));
+}
+
 #' Generates a random binomial value whose probability of being
 #' 1 is a bivariate normal distribution scaled such that it is unity
 #' at 0,0 and diminishes asymptotically in all directions from there
@@ -95,11 +110,13 @@ sample_polar <- function(nn=1000,rmax=3,thetawrap=0.5
 
 #' ### Here we try it
 #' 
-maxes <- c(1.5,1.8); mins<-c(-1.65,-2.3);
-ctr <- c(0.3,-0.2); # okay, so the center parameter works...
+#maxes <- c(1.5,1.8); mins<-c(-1.65,-2.3);
+maxes <- c(4,4); mins <- c(-4,-4);
+#ctr <- c(0.3,-0.2); # okay, so the center parameter works...
+ctr <- c(0,0);
 #' Sample from a polar space immediately converting to cartesian
 #' TODO: create a sample_polar function
-spol<-sample_polar(rmax=4,maxes=maxes,mins=mins,center=ctr)$spol;
+spol<-sample_polar(rmax=1,maxes=maxes,mins=mins,center=ctr)$spol;
 #spol<-cbind(r=runif(1000,0,3),theta=runif(1000,0,2.5*pi));
 #' generate binomial outcomes (we are going to look for the 0.8 contour)
 spol<-cbind(spol,res=apply(pol2crt(spol,center = ctr),1,function(zz) gen_binom(zz[1],zz[2])));
@@ -108,7 +125,7 @@ prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
 logenv <- new.env();
 #' The following parts get repeated many times
 for(ii in 100000){
-  newsmp <- sample_polar(rmax=4,maxes=maxes,mins=mins,center=ctr);
+  newsmp <- sample_polar(rmax=1,maxes=maxes,mins=mins,center=ctr);
   bestfit <- with(predict(
     update(prmod,data=data.frame(spol))
     ,data.frame(newsmp$spol),type='response',se.fit=T)
