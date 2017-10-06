@@ -97,54 +97,129 @@ pol2crt <- function(coords,center=0,names){
     }
   }
 
-sample_polar <- function(nn=1000,rmax=3,thetawrap=0.5
-                         ,ntheta=1,center=c(0,0),maxes,mins){
+sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
+                         ,ntheta=1,center=c(0,0),maxs,mins){
   oo <- cbind(r=runif(nn,0,rmax),theta=runif(nn,0,(2+thetawrap)*pi));
-  oocr <- pol2crt(oo,center=center);
-  if(!missing(maxes)&!missing(mins)){
-    oor <- apply(oocr,1,function(xx) any(xx>maxes)||any(xx<mins));
-    oo <- oo[!oor,]; oocr <- oocr[!oor,];
-  }
+  oocr <- rescale(pol2crt(oo)
+                  ,maxs=maxs,mins=mins,smaxs=rmax,smins=-rmax);
+  # if(!missing(maxes)&!missing(mins)){
+  #   oor <- apply(oocr,1,function(xx) any(xx>maxes)||any(xx<mins));
+  #   oo <- oo[!oor,]; oocr <- oocr[!oor,];
+  # }
   return(list(spol=oo,scrt=oocr));
+}
+#' xx is a list with a polar and a cartesian version of the 
+#' same coordinates
+#' logenv is an environment that could contain an iter variable
+#' if it doesn't, the variable is created and set to 1
+simpoints <- function(xx,logenv
+                      ,simfun=ptsim_binom,panelfun=ptpnl_passthru,...){
+  if('iter' %in% ls(logenv)) myiter <- logenv$iter + 1 else myiter <- 1;
+  rn <- rownames(xx$spol) <- rownames(xx$scrt) <- apply(
+    xx$scrt,1,function(ii) paste0(c('_',ii),collapse='_'));
+  data <- sapply(rn,function(ii) simfun(xx$scrt[ii,],...)
+                 ,simplify=F);
+  logenv[[itername<-paste0('i',myiter)]] <- list();
+  outcome<-c();
+  for(ii in rn) {
+    logenv[[itername]][[ii]]<-panelfun(data[[ii]],coords=xx$scrt[ii,]);
+  }
+  logenv$iter <- myiter;
+  
+  #spol <- rbind(spol,cbind(newsmp$spol,res=apply(newsmp$scrt,1,function(zz) gen_binom(zz[1],zz[2]))));
+  cbind(xx$spol
+        ,res=sapply(logenv[[itername]],function(ii) ii$outcome[1])
+        ,iter=myiter
+        );
+}
+
+#' select coordinates from a sample of the coordinate
+#' space (xx) (in polar coordinates) using various criteria.
+selcoords <- function(xx,withpreds=F
+                      ,type=c('range','serange','quantile','topn')
+                      ,target=0.2,se=1,quantile=0.1,range=target+c(-.1,.1),topn=100
+                      ,model
+                      ,...
+){
+  cols <- colnames(xx)[!colnames(xx) %in% c('res','iter')];
+  # make predictions
+  if(missing(model)) model <- glm(res~r*cos(theta)*sin(theta)
+                                  ,data.frame(xx)
+                                  ,family='binomial');
+  preds <- predict(model,data.frame(xx),type='response',se.fit=T);
+  nrmpreds <- (preds$fit - target)^2/preds$se.fit  
+  type<-match.arg(type,several.ok = T);
+  oo <- list();
+  if('range' %in% type)
+    oo$range <- preds$fit>range[1]&preds$fit<range[2];
+  if('serange' %in% type)
+    oo$serange <- abs(preds$fit-target)<se*preds$se.fit;
+  if('quantile' %in% type)
+    oo$quantile <- nrmpreds<quantile(nrmpreds,quantile);
+  if('topn' %in% type)
+    oo$topn <- rank(nrmpreds)<=topn;
+  out <- apply(do.call(cbind,oo),1,all);
+  if(withpreds) return(cbind(keep=out,preds=preds,normpreds=nrmpreds)) else return(out);
 }
 
 #' ### Here we try it
 #' 
 #maxes <- c(1.5,1.8); mins<-c(-1.65,-2.3);
-maxes <- c(4,4); mins <- c(-4,-4);
+maxs <- c(4,4); mins <- c(-4,-4);
 #ctr <- c(0.3,-0.2); # okay, so the center parameter works...
 ctr <- c(0,0);
 #' Sample from a polar space immediately converting to cartesian
 #' TODO: create a sample_polar function
-spol<-sample_polar(rmax=1,maxes=maxes,mins=mins,center=ctr)$spol;
-#spol<-cbind(r=runif(1000,0,3),theta=runif(1000,0,2.5*pi));
-#' generate binomial outcomes (we are going to look for the 0.8 contour)
-spol<-cbind(spol,res=apply(pol2crt(spol,center = ctr),1,function(zz) gen_binom(zz[1],zz[2])));
+spol <- sample_polar(maxs=maxs,mins=mins,thetawrap=0.1)$spol;
+spol<-cbind(spol
+            ,res=apply(rescale(pol2crt(spol)
+                               ,maxs=maxs,mins=mins),1,function(zz) gen_binom(zz[1],zz[2]))
+            ,iter=0
+            );
 #' Fit a model
-prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
+#prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
+#twopi <- cbind(0,rep_len(2*pi,ncol(spol)-3),0,0);
+prmod <- glm(res~r*cos(theta)*sin(theta)
+             ,data.frame(rbind(spol
+                               # ,spol + twopi[rep_len(1,nrow(spol)),]
+                               # ,spol - twopi[rep_len(1,nrow(spol)),]
+                               ))
+             ,family='binomial');
 logenv <- new.env();
 #' The following parts get repeated many times
-for(ii in 100000){
-  newsmp <- sample_polar(rmax=1,maxes=maxes,mins=mins,center=ctr);
-  bestfit <- with(predict(
-    update(prmod,data=data.frame(spol))
-    ,data.frame(newsmp$spol),type='response',se.fit=T)
-    ,{prs <- abs(fit-0.2)^2/se.fit;
-    #prs <- abs(fit-0.2);
-    which(prs<quantile(prs,.15));});
+for(jj in 1:100){
+  newsmp <- sample_polar(nn=1000,rmax=1
+                         ,maxs=maxs,mins=mins,thetawrap=0.1);
+  bestfit <- selcoords(newsmp$spol
+                       ,type=c('quantile','range')
+                       ,model=update(prmod)
+                       ,quantile=.05
+                       );
+  # bestfit <- with(predict(
+  #   update(prmod,data=data.frame(
+  #     rbind(spol
+  #           # ,spol + twopi[rep_len(1,nrow(spol)),]
+  #           # ,spol - twopi[rep_len(1,nrow(spol)),]
+  #           )))
+  #   ,data.frame(newsmp$spol),type='response',se.fit=T)
+  #   ,{prs <- abs(fit-0.2)^2/se.fit;
+  #   #prs <- abs(fit-0.2);
+  #   which(prs<quantile(prs,.05)&abs(fit-0.2)<0.1);});
   newsmp <- sapply(newsmp,function(xx) xx[bestfit,],simplify=F);
-  rownames(newsmp$scrt) <- apply(newsmp$scrt,1
-                                 ,function(xx) paste0(c('_',xx),collapse='_'));
-  data <- sapply(rownames(newsmp$scrt)
-                 ,function(ii) ptsim_binom(newsmp$scrt[ii,])
-                 ,simplify=F);
-  outcome<-c();
-  for(ii in names(data)) {
-    logenv[[ii]]<-ptpnl_passthru(data[[ii]],coords=newsmp$scrt[ii,]);
-  }
-  #spol <- rbind(spol,cbind(newsmp$spol,res=apply(newsmp$scrt,1,function(zz) gen_binom(zz[1],zz[2]))));
-  spol <- rbind(spol,cbind(newsmp$spol
-                           ,res=sapply(names(data),function(xx) logenv[[xx]]$outcome[1])))
+  spol <- rbind(spol,simpoints(newsmp,logenv));
+  # 
+  # rownames(newsmp$scrt) <- apply(newsmp$scrt,1
+  #                                ,function(xx) paste0(c('_',xx),collapse='_'));
+  # data <- sapply(rownames(newsmp$scrt)
+  #                ,function(ii) ptsim_binom(newsmp$scrt[ii,])
+  #                ,simplify=F);
+  # outcome<-c();
+  # for(ii in names(data)) {
+  #   logenv[[ii]]<-ptpnl_passthru(data[[ii]],coords=newsmp$scrt[ii,]);
+  # }
+  # #spol <- rbind(spol,cbind(newsmp$spol,res=apply(newsmp$scrt,1,function(zz) gen_binom(zz[1],zz[2]))));
+  # spol <- rbind(spol,cbind(newsmp$spol
+  #                          ,res=sapply(names(data),function(xx) logenv[[xx]]$outcome[1])))
 }
 #spol0 <- cbind(r=runif(1000,0,3),theta=runif(1000,0,2.5*pi));
 #scrt0 <- pol2crt(spol0,center=ctr);
@@ -154,16 +229,19 @@ for(ii in 100000){
 #' End repeat/update part
 #' 
 #' Below are the visualizations that can be done on any iteration
-plot(spol[,-3],pch='.',col='#00000050'); #,xlim=c(1.5,2.5));
-points(newsmp$spol,pch='+',col='red');
+plot(spol[,1:2],pch='.',col='#00000050'); #,xlim=c(1.5,2.5));
+points(spol[spol[,'iter']==max(spol[,'iter']),1:2],pch='+',col='red');
 #' How good is the fitted contour?
-bar <-abs(predict(update(prmod),type='response')-0.2);
-foo<-pol2crt(spol[which(bar<0.01),-3],center=ctr);plot(foo,pch='.',col='#00000099');dim(foo);
+bar <- abs(predict(update(prmod),type='response')-0.2);
+# bar <-rowMeans(
+#   do.call(
+#     cbind,split(bar,ceiling(seq_along(bar)/(length(bar)/3)))));
+foo<-rescale(pol2crt(spol[which(bar<0.01),1:2]),maxs=maxs,mins=mins);plot(foo,pch='.',col='#00000099');dim(foo);
 #' Run the following once only after the first few iteration, for reference
 # bar.bak <- bar; foo.bak <- foo;
 points(foo.bak,col='red',pch='+');
 #' How does this look on polar coordinates?
-plot(spol[which(bar.bak<quantile(bar.bak,.1)),-3],pch='+',col='red',xlim=range(spol[,1]),ylim=range(spol[,2]));
+plot(spol[which(bar.bak<quantile(bar.bak,.1)),-3],pch='+',col='red',xlim=range(spol[,1],na.rm=T),ylim=range(spol[,2],na.rm=T));
 points(spol[which(bar<quantile(bar,.1)),-3]);
 #' Note: if the distribution is not logistic, so far it's in a way
 #' that does not cause it to be zero-inflated, overdispersed, or 
