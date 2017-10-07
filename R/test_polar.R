@@ -102,12 +102,9 @@ sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
   oo <- cbind(r=runif(nn,0,rmax),theta=runif(nn,0,(2+thetawrap)*pi));
   oocr <- rescale(pol2crt(oo)
                   ,maxs=maxs,mins=mins,smaxs=rmax,smins=-rmax);
-  # if(!missing(maxes)&!missing(mins)){
-  #   oor <- apply(oocr,1,function(xx) any(xx>maxes)||any(xx<mins));
-  #   oo <- oo[!oor,]; oocr <- oocr[!oor,];
-  # }
   return(list(spol=oo,scrt=oocr));
 }
+
 #' xx is a list with a polar and a cartesian version of the 
 #' same coordinates
 #' logenv is an environment that could contain an iter variable
@@ -117,6 +114,7 @@ simpoints <- function(xx,logenv
   if('iter' %in% ls(logenv)) myiter <- logenv$iter + 1 else myiter <- 1;
   rn <- rownames(xx$spol) <- rownames(xx$scrt) <- apply(
     xx$scrt,1,function(ii) paste0(c('_',ii),collapse='_'));
+  names(rn) <- NULL;
   data <- sapply(rn,function(ii) simfun(xx$scrt[ii,],...)
                  ,simplify=F);
   logenv[[itername<-paste0('i',myiter)]] <- list();
@@ -137,7 +135,7 @@ simpoints <- function(xx,logenv
 #' space (xx) (in polar coordinates) using various criteria.
 selcoords <- function(xx,withpreds=F
                       ,type=c('range','serange','quantile','topn')
-                      ,target=0.2,se=1,quantile=0.1,range=target+c(-.1,.1),topn=100
+                      ,target=0.8,se=1,quantile=0.1,range=target+c(-.1,.1),topn=100
                       ,model
                       ,...
 ){
@@ -159,23 +157,18 @@ selcoords <- function(xx,withpreds=F
   if('topn' %in% type)
     oo$topn <- rank(nrmpreds)<=topn;
   out <- apply(do.call(cbind,oo),1,all);
-  if(withpreds) return(cbind(keep=out,preds=preds,normpreds=nrmpreds)) else return(out);
+  if(withpreds) return(cbind(keep=out,preds=preds$fit,se.fit=preds$se.fit,normpreds=nrmpreds)) else return(out);
 }
 
 #' ### Here we try it
 #' 
 #maxes <- c(1.5,1.8); mins<-c(-1.65,-2.3);
-maxs <- c(4,4); mins <- c(-4,-4);
+maxs <- c(4,3); mins <- c(-2,-4);
 #ctr <- c(0.3,-0.2); # okay, so the center parameter works...
 ctr <- c(0,0);
 #' Sample from a polar space immediately converting to cartesian
 #' TODO: create a sample_polar function
-spol <- sample_polar(maxs=maxs,mins=mins,thetawrap=0.1)$spol;
-spol<-cbind(spol
-            ,res=apply(rescale(pol2crt(spol)
-                               ,maxs=maxs,mins=mins),1,function(zz) gen_binom(zz[1],zz[2]))
-            ,iter=0
-            );
+spol <- simpoints(sample_polar(maxs=maxs,mins=mins,thetawrap=0.1),new.env());
 #' Fit a model
 #prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
 #twopi <- cbind(0,rep_len(2*pi,ncol(spol)-3),0,0);
@@ -195,54 +188,25 @@ for(jj in 1:100){
                        ,model=update(prmod)
                        ,quantile=.05
                        );
-  # bestfit <- with(predict(
-  #   update(prmod,data=data.frame(
-  #     rbind(spol
-  #           # ,spol + twopi[rep_len(1,nrow(spol)),]
-  #           # ,spol - twopi[rep_len(1,nrow(spol)),]
-  #           )))
-  #   ,data.frame(newsmp$spol),type='response',se.fit=T)
-  #   ,{prs <- abs(fit-0.2)^2/se.fit;
-  #   #prs <- abs(fit-0.2);
-  #   which(prs<quantile(prs,.05)&abs(fit-0.2)<0.1);});
   newsmp <- sapply(newsmp,function(xx) xx[bestfit,],simplify=F);
   spol <- rbind(spol,simpoints(newsmp,logenv));
-  # 
-  # rownames(newsmp$scrt) <- apply(newsmp$scrt,1
-  #                                ,function(xx) paste0(c('_',xx),collapse='_'));
-  # data <- sapply(rownames(newsmp$scrt)
-  #                ,function(ii) ptsim_binom(newsmp$scrt[ii,])
-  #                ,simplify=F);
-  # outcome<-c();
-  # for(ii in names(data)) {
-  #   logenv[[ii]]<-ptpnl_passthru(data[[ii]],coords=newsmp$scrt[ii,]);
-  # }
-  # #spol <- rbind(spol,cbind(newsmp$spol,res=apply(newsmp$scrt,1,function(zz) gen_binom(zz[1],zz[2]))));
-  # spol <- rbind(spol,cbind(newsmp$spol
-  #                          ,res=sapply(names(data),function(xx) logenv[[xx]]$outcome[1])))
 }
-#spol0 <- cbind(r=runif(1000,0,3),theta=runif(1000,0,2.5*pi));
-#scrt0 <- pol2crt(spol0,center=ctr);
-#oor <- apply(scrt0,1,function(xx) any(xx>maxes)||any(xx<mins));
-#scrt0 <- scrt0[!oor,]; spol0 <- spol0[!oor,];
-#spol <- spol[bestfit,]; scrt0 <- scrt0[bestfit,];
 #' End repeat/update part
 #' 
 #' Below are the visualizations that can be done on any iteration
 plot(spol[,1:2],pch='.',col='#00000050'); #,xlim=c(1.5,2.5));
 points(spol[spol[,'iter']==max(spol[,'iter']),1:2],pch='+',col='red');
 #' How good is the fitted contour?
-bar <- abs(predict(update(prmod),type='response')-0.2);
-# bar <-rowMeans(
-#   do.call(
-#     cbind,split(bar,ceiling(seq_along(bar)/(length(bar)/3)))));
-foo<-rescale(pol2crt(spol[which(bar<0.01),1:2]),maxs=maxs,mins=mins);plot(foo,pch='.',col='#00000099');dim(foo);
+#bar <- abs(predict(update(prmod),type='response')-0.2);
+foo<-rescale(pol2crt(spol[selcoords(spol,type='serange',se=2),1:2]),maxs=maxs,mins=mins);plot(foo,pch='.',col='#00000099');dim(foo);
 #' Run the following once only after the first few iteration, for reference
-# bar.bak <- bar; foo.bak <- foo;
+# bar.bak <- bar; 
+# foo.bak <- foo;
 points(foo.bak,col='red',pch='+');
 #' How does this look on polar coordinates?
-plot(spol[which(bar.bak<quantile(bar.bak,.1)),-3],pch='+',col='red',xlim=range(spol[,1],na.rm=T),ylim=range(spol[,2],na.rm=T));
-points(spol[which(bar<quantile(bar,.1)),-3]);
+
+plot(spol[spol[,'iter']<100&spol[,'iter']>0,1:2],pch='+',col='red',xlim=range(spol[,1],na.rm=T),ylim=range(spol[,2],na.rm=T));
+points(spol[selcoords(spol,type='quantile'),1:2],pch='*');
 #' Note: if the distribution is not logistic, so far it's in a way
 #' that does not cause it to be zero-inflated, overdispersed, or 
 #' heteroscedastic
@@ -250,3 +214,24 @@ points(spol[which(bar<quantile(bar,.1)),-3]);
 #' Let's see if this holds up when we are using real p-values.
 #' But first we need to get bounds and centering to work.
 #' 
+
+
+#' Next steps...
+#' 
+#' Scaling just doesn't look like it will work. Or maybe that's
+#' an artifact of the process not really being a statistical test?
+#' 
+#' The other alternative is to ...
+#' 
+#' 1. Randomly sample from the thetas
+#' 2. At each point on thetas 
+#'   1. Exclude those going beyond limits, RETAIN: smallest excluded r
+#'   2. If too few left, resample within above limit
+#'   3. Simulate from 0 to 1. RETAIN: result
+#'   4. Fit a univariate logistic model with r as predictor
+#'   5. Select all predicted values within 3*se.fit of 0.8
+#'   6. RETAIN: max and min r's corresponding to those values
+#' 3. At subsequent iterations...
+#'   1. At each r, predict the min-r and the smaller of max-r or exclusion zone
+#'   2. Now only simulate between these two points
+#'   3. RETAIN: result, smallest excluded, max-r, min-r

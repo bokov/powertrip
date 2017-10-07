@@ -4,7 +4,7 @@
 #' 
 #' Simulations
 ptsim_binom <- function(coords,...){
-  rbinom(1,1,mvtnorm::dmvnorm(coords)/mvtnorm::dmvnorm(rep_len(0,length(coords))));
+  1-rbinom(1,1,mvtnorm::dmvnorm(coords)/mvtnorm::dmvnorm(rep_len(0,length(coords))));
 }
 
 #' Title ptsim_2lin
