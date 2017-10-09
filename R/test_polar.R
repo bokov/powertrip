@@ -95,7 +95,29 @@ pol2crt <- function(coords,center=0,names){
                  cumprod(c(1,sin(coords[-1]))) + 
                  center,names);
     }
-  }
+}
+
+#' Title Find sampling limits on r for a given set of thetas
+#' Returns the maximum value of 'r' such that upon conversion
+#' to cartesian all coordinates will fall within the specified
+#' limits. Note: 0 probably won't work as a limit
+#'
+#' @param coords  thetas from a set of polar coordinates
+#' @param maxs    cartesian maximum values; indicate absence of limits with Inf
+#' @param mins    cartesian minimum values; indicate absence of limits with -Inf
+#' @param ... 
+#'
+#' @return        the maximum permitted value for 'r' at those thetas
+#' @export
+#'
+#' @examples
+pollim <- function(coords=Inf,maxs=Inf,mins=-Inf,...){
+  if(length(maxs)!=length(coords)+1 && length(maxs)>1) stop('maxs should be 1 more than length of coords');
+  if(length(mins)!=length(coords)+1 && length(mins)>1) stop('mins should be 1 more than length of coords');
+  maxs <- rep_len(length(coords)+1); mins <- rep_len(length(coords)+1);
+  min(c(maxs,mins))/c(cos(coords),1)*cumprod(c(1,sin(coords)));
+}
+
 
 sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
                          ,ntheta=1,center=c(0,0),maxs,mins){
