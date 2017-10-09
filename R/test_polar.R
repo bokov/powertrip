@@ -111,13 +111,45 @@ pol2crt <- function(coords,center=0,names){
 #' @export
 #'
 #' @examples
-pollim <- function(coords=Inf,maxs=Inf,mins=-Inf,...){
+pollim <- function(coords,maxs=Inf,mins=-Inf,...){
   if(length(maxs)!=length(coords)+1 && length(maxs)>1) stop('maxs should be 1 more than length of coords');
   if(length(mins)!=length(coords)+1 && length(mins)>1) stop('mins should be 1 more than length of coords');
-  maxs <- rep_len(length(coords)+1); mins <- rep_len(length(coords)+1);
-  min(c(maxs,mins))/c(cos(coords),1)*cumprod(c(1,sin(coords)));
+  maxs <- rep_len(maxs,length(coords)+1); mins <- rep_len(mins,length(coords)+1);
+  oo <- c(maxs,mins)/(c(cos(coords),1)*cumprod(c(1,sin(coords))));
+  min(oo[oo>0]);
 }
-
+#' Okay, the above works! The following generates a plot of radially sampled
+#' points strictly bounded by the values of `maxs` and `mins`
+#' which as of this moment are `c(4,3)` and `c(-2,-4)` respectively
+plot(
+  pol2crt(
+    cbind(
+      r=apply(baz
+              ,1,function(xx) runif(1,0,pollim(xx,maxs=maxs,mins=mins)))
+      ,theta=baz)));
+#' Let's try iterating over the r's for one theta
+thetas<-cbind(theta=runif(1000,0,2*pi));
+ii <- 3;
+ban <- (cbind(rlim=apply(thetas,1,pollim,maxs=maxs,mins=mins),theta=thetas));
+baz <- cbind(r=runif(100,0,ban[ii,'rlim']),theta=ban[ii,'theta']);
+baz <- cbind(baz,res=apply(baz,1,function(xx) ptsim_binom(pol2crt(xx))));
+bax <- glm(res~r,data.frame(baz),family='binomial');
+prdinv <- dose.p(bax,p=.8);
+prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
+                   ,type='resp',se.fit=T)
+           ,c(fit,se.fit));
+while(prdr[2]*1>0.01){
+  sim0 <- cbind(r=runif(20,max(0,sum(print(prdinv)*c(1,-2))),sum(print(prdinv)*c(1,2))),theta=ban[ii,'theta']);
+  sim0 <- cbind(sim0,res=apply(sim0,1,function(xx) ptsim_binom(pol2crt(xx))));
+  baz <- rbind(baz,sim0);
+  prdinv <- dose.p(bax<-update(bax),p=.8);
+  prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
+                     ,type='resp',se.fit=T)
+             ,c(fit,se.fit));
+}
+#' View the sampled points and the outcome
+dim(baz);
+plot(predict(bax,type='response')~baz[,'r'],col='red',ylim=c(0,1),pch='.'); points(baz[,'r'],baz[,'res'],pch='+'); abline(v=prdinv[1]+c(-2,2)*print(prdinv)[2],lty=2);
 
 sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
                          ,ntheta=1,center=c(0,0),maxs,mins){
