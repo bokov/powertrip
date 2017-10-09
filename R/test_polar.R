@@ -128,35 +128,30 @@ plot(
               ,1,function(xx) runif(1,0,pollim(xx,maxs=maxs,mins=mins)))
       ,theta=baz)));
 #' Let's try iterating over the r's for one theta
-thetas<-cbind(theta=runif(1000,0,2*pi));
-ii <- 3;
-ban <- (cbind(rlim=apply(thetas,1,pollim,maxs=maxs,mins=mins),theta=thetas));
-baz <- cbind(r=runif(100,0,ban[ii,'rlim']),theta=ban[ii,'theta']);
-baz <- cbind(baz,res=apply(baz,1,function(xx) ptsim_binom(pol2crt(xx))));
-bax <- glm(res~r,data.frame(baz),family='binomial');
-prdinv <- dose.p(bax,p=.8);
-prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
-                   ,type='resp',se.fit=T)
-           ,c(fit,se.fit));
-while(prdr[2]*1>0.01){
-  sim0 <- cbind(r=runif(20,max(0,sum(print(prdinv)*c(1,-2))),sum(print(prdinv)*c(1,2))),theta=ban[ii,'theta']);
-  sim0 <- cbind(sim0,res=apply(sim0,1,function(xx) ptsim_binom(pol2crt(xx))));
-  baz <- rbind(baz,sim0);
-  prdinv <- dose.p(bax<-update(bax),p=.8);
-  prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
-                     ,type='resp',se.fit=T)
-             ,c(fit,se.fit));
-}
-#' View the sampled points and the outcome
-dim(baz);
-plot(predict(bax,type='response')~baz[,'r'],col='red',ylim=c(0,1),pch='.'); points(baz[,'r'],baz[,'res'],pch='+'); abline(v=prdinv[1]+c(-2,2)*print(prdinv)[2],lty=2);
-
 sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
                          ,ntheta=1,center=c(0,0),maxs,mins){
   oo <- cbind(r=runif(nn,0,rmax),theta=runif(nn,0,(2+thetawrap)*pi));
   oocr <- rescale(pol2crt(oo)
                   ,maxs=maxs,mins=mins,smaxs=rmax,smins=-rmax);
   return(list(spol=oo,scrt=oocr));
+}
+
+#' This is a row-wise operation
+sample_polar2 <- function(thetas,nn=20
+                          ,maxlims=pollim(thetas,maxs=maxs,mins=mins)
+                          ,minlims=0
+                          ,rpred=NA # here we will put the result of dose.p()
+                          ,est=0,se=Inf,n.se=2
+                          ,simfun=ptsim_binom
+                          ,panfun=ptpnl_passthru){
+  if(!missing(rpred)) {est<-rpred[1];se=attr(rpred,'SE')};
+  oo<-cbind(r=runif(nn,max(est-n.se*se,minlims),min(est+n.se*se,maxlims))
+            ,rbind(thetas)[rep_len(1,nn),]);
+  #if(!is.na(simfun)){
+    oo<- cbind(oo,res=apply(pol2crt(oo),1,ptsim_binom));
+    # todo: add call to panfun
+  #}
+  oo;
 }
 
 #' xx is a list with a polar and a cartesian version of the 
@@ -222,6 +217,35 @@ maxs <- c(4,3); mins <- c(-2,-4);
 ctr <- c(0,0);
 #' Sample from a polar space immediately converting to cartesian
 #' TODO: create a sample_polar function
+#thetas<-cbind(theta=runif(1000,0,2*pi));
+ii <- 3;
+#ban <- (cbind(rlim=apply(thetas,1,pollim,maxs=maxs,mins=mins),theta=thetas));
+#baz <- cbind(r=runif(100,0,ban[ii,'rlim']),theta=ban[ii,'theta']);
+#baz <- cbind(baz,res=apply(baz,1,function(xx) ptsim_binom(pol2crt(xx))));
+baz <- sample_polar2(runif(1,0,2*pi));
+bax <- glm(res~r,data.frame(baz),family='binomial');
+prdinv <- dose.p(bax,p=.8);
+prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
+                   ,type='resp',se.fit=T)
+           ,c(fit,se.fit));
+while(prdr[2]*1>0.01){
+  # sim0 <- cbind(r=runif(20,max(0,sum(print(prdinv)*c(1,-2))),sum(print(prdinv)*c(1,2))),theta=ban[ii,'theta']);
+  # sim0 <- cbind(sim0,res=apply(sim0,1,function(xx) ptsim_binom(pol2crt(xx))));
+  baz <- rbind(baz,sample_polar2(ban[ii,'theta'],rpred=prdinv));
+  prdinv <- MASS::dose.p(bax<-update(bax),p=.8);
+  prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
+                     ,type='resp',se.fit=T)
+             ,c(fit,se.fit));
+}
+#' View the sampled points and the outcome
+dim(baz);
+plot(predict(bax,type='response')~baz[,'r'],col='red',ylim=c(0,1),pch='.');
+points(baz[,'r'],baz[,'res'],pch='+');
+abline(h=0.8,v=prdinv[1]+c(-2,2)*print(prdinv)[2],lty=2);
+
+
+#' 
+#' 
 spol <- simpoints(sample_polar(maxs=maxs,mins=mins,thetawrap=0.1),new.env());
 #' Fit a model
 #prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
