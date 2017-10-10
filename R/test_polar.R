@@ -121,12 +121,12 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
 #' Okay, the above works! The following generates a plot of radially sampled
 #' points strictly bounded by the values of `maxs` and `mins`
 #' which as of this moment are `c(4,3)` and `c(-2,-4)` respectively
-plot(
-  pol2crt(
-    cbind(
-      r=apply(baz
-              ,1,function(xx) runif(1,0,pollim(xx,maxs=maxs,mins=mins)))
-      ,theta=baz)));
+# plot(
+#   pol2crt(
+#     cbind(
+#       r=apply(baz
+#               ,1,function(xx) runif(1,0,pollim(xx,maxs=maxs,mins=mins)))
+#       ,theta=baz)));
 #' Let's try iterating over the r's for one theta
 sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
                          ,ntheta=1,center=c(0,0),maxs,mins){
@@ -333,11 +333,11 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
 #' ### Here we try it
 #' 
 #maxes <- c(1.5,1.8); mins<-c(-1.65,-2.3);
-maxs <- c(4,3); mins <- c(-2,-4);
+# maxs <- c(4,3); mins <- c(-2,-4);
 #ctr <- c(0.3,-0.2); # okay, so the center parameter works...
 #ctr <- c(0,0);
 #' First, create the dataenv
-foo<-samplephis(maxs=maxs,mins=mins);
+# foo<-samplephis(maxs=maxs,mins=mins);
 #' Sample from a polar space immediately converting to cartesian
 #' TODO: create a sample_polar function
 #thetas<-cbind(theta=runif(1000,0,2*pi));
@@ -363,53 +363,48 @@ foo<-samplephis(maxs=maxs,mins=mins);
 #              ,c(fit,se.fit));
 # }
 #' View the sampled points and the outcome
-dim(baz);
-plot(predict(bax,type='response')~baz[,'r'],col='red',ylim=c(0,1),pch='.');
-points(baz[,'r'],baz[,'res'],pch='+');
-abline(h=0.8,v=prdinv[1]+c(-2,2)*print(prdinv)[2],lty=2);
-
-
-#' 
-#' 
-spol <- simpoints(sample_polar(maxs=maxs,mins=mins,thetawrap=0.1),new.env());
+# dim(baz);
+# plot(predict(bax,type='response')~baz[,'r'],col='red',ylim=c(0,1),pch='.');
+# points(baz[,'r'],baz[,'res'],pch='+');
+# abline(h=0.8,v=prdinv[1]+c(-2,2)*print(prdinv)[2],lty=2);
+# spol <- simpoints(sample_polar(maxs=maxs,mins=mins,thetawrap=0.1),new.env());
 #' Fit a model
 #prmod <- glm(res~r*sin(theta)*cos(theta),data.frame(spol),family='binomial');
 #twopi <- cbind(0,rep_len(2*pi,ncol(spol)-3),0,0);
-prmod <- glm(res~r*cos(theta)*sin(theta)
-             ,data.frame(rbind(spol
-                               # ,spol + twopi[rep_len(1,nrow(spol)),]
-                               # ,spol - twopi[rep_len(1,nrow(spol)),]
-                               ))
-             ,family='binomial');
-logenv <- new.env();
+# prmod <- glm(res~r*cos(theta)*sin(theta)
+#              ,data.frame(rbind(spol
+#                                # ,spol + twopi[rep_len(1,nrow(spol)),]
+#                                # ,spol - twopi[rep_len(1,nrow(spol)),]
+#                                ))
+#              ,family='binomial');
+# logenv <- new.env();
 #' The following parts get repeated many times
-for(jj in 1:100){
-  newsmp <- sample_polar(nn=1000,rmax=1
-                         ,maxs=maxs,mins=mins,thetawrap=0.1);
-  bestfit <- selcoords(newsmp$spol
-                       ,type=c('quantile','range')
-                       ,model=update(prmod)
-                       ,quantile=.05
-                       );
-  newsmp <- sapply(newsmp,function(xx) xx[bestfit,],simplify=F);
-  spol <- rbind(spol,simpoints(newsmp,logenv));
-}
+# for(jj in 1:100){
+#   newsmp <- sample_polar(nn=1000,rmax=1
+#                          ,maxs=maxs,mins=mins,thetawrap=0.1);
+#   bestfit <- selcoords(newsmp$spol
+#                        ,type=c('quantile','range')
+#                        ,model=update(prmod)
+#                        ,quantile=.05
+#                        );
+#   newsmp <- sapply(newsmp,function(xx) xx[bestfit,],simplify=F);
+#   spol <- rbind(spol,simpoints(newsmp,logenv));
+# }
 #' End repeat/update part
 #' 
 #' Below are the visualizations that can be done on any iteration
-plot(spol[,1:2],pch='.',col='#00000050'); #,xlim=c(1.5,2.5));
-points(spol[spol[,'iter']==max(spol[,'iter']),1:2],pch='+',col='red');
+# plot(spol[,1:2],pch='.',col='#00000050'); #,xlim=c(1.5,2.5));
+# points(spol[spol[,'iter']==max(spol[,'iter']),1:2],pch='+',col='red');
 #' How good is the fitted contour?
 #bar <- abs(predict(update(prmod),type='response')-0.2);
-foo<-rescale(pol2crt(spol[selcoords(spol,type='serange',se=2),1:2]),maxs=maxs,mins=mins);plot(foo,pch='.',col='#00000099');dim(foo);
+# foo<-rescale(pol2crt(spol[selcoords(spol,type='serange',se=2),1:2]),maxs=maxs,mins=mins);plot(foo,pch='.',col='#00000099');dim(foo);
 #' Run the following once only after the first few iteration, for reference
 # bar.bak <- bar; 
 # foo.bak <- foo;
-points(foo.bak,col='red',pch='+');
+# points(foo.bak,col='red',pch='+');
 #' How does this look on polar coordinates?
-
-plot(spol[spol[,'iter']<100&spol[,'iter']>0,1:2],pch='+',col='red',xlim=range(spol[,1],na.rm=T),ylim=range(spol[,2],na.rm=T));
-points(spol[selcoords(spol,type='quantile'),1:2],pch='*');
+# plot(spol[spol[,'iter']<100&spol[,'iter']>0,1:2],pch='+',col='red',xlim=range(spol[,1],na.rm=T),ylim=range(spol[,2],na.rm=T));
+# points(spol[selcoords(spol,type='quantile'),1:2],pch='*');
 #' Note: if the distribution is not logistic, so far it's in a way
 #' that does not cause it to be zero-inflated, overdispersed, or 
 #' heteroscedastic
