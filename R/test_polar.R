@@ -226,27 +226,35 @@ estimate_rs <- function(data,rlist=list(),power=0.8,...){
   rlist;
 }
 
-samplephis <- function(dataenv,logenv,errenv
+samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
                        ,samples=200,dims=1,nworst=100
                        # at each phi, keep gathering simulations
                        # on sampled r's until tolse*se.fit < tol
                        ,power=0.8,tol=0.01,tolse=1
                        ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
+                       ,wd=paste0(getwd(),'/')
+                       # when a file having the name specified by this variable is found, 
+                       # the dataenv,logenv, and errenv objects are saved
+                       ,savetrigger=paste0(wd,'pt_savedata')
+                       # name of file to which to save when savetrigger encountered
+                       ,savefile=paste0(wd,'pt_result.rdata')
+                       # name of file that will be sourced (once and then moved) if found
+                       ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
                        ,...){
   if(missing(dataenv)) dataenv <- new.env();
-  if(missing(errenv)) errenv <- new.env();
-  on.exit(return(dataenv));
+  on.exit(save(dataenv,logenv,errenv,file=savefile));
   phis0 <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
   colnames(phis0) <- paste0('phi',seq_len(dims));
   # rownames(phis) <- NULL;
   # TODO: catch length mismatches and missing variables from dataenv
-  if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters','iilm'),ls(dataenv)))==0){
+  if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters','iilm','calls'),ls(dataenv)))==0){
     phipr <- predict(dataenv$iilm,data.frame(phis0),se.fit=T);
     phis0 <- phis0[phikeep <- which(rank(1-phipr$se.fit)<=nworst),,drop=F];
     phipr <- lapply(phipr,function(xx) xx[phikeep]);
     iter <- tail(dataenv$iters,1) + 1;
   } else {
     dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- dataenv$cycle <- c();
+    dataenv$calls <- list();
     phipr <- list(fit=rep_len(0,nrow(phis0)),se.fit=rep_len(Inf,nrow(phis0)));
     iter <- 1;
   }
@@ -288,6 +296,14 @@ samplephis <- function(dataenv,logenv,errenv
       rownames(dataenv$phis)[ncol(dataenv$phis)] <- iiname;
     }
     setTxtProgressBar(pb,ii);
+    if(file.exists(savetrigger)) {
+      save(dataenv,logenv,errenv,file=savefile);
+      file.remove(savetrigger);
+    }
+    if(file.exists(sourcepatch)) {
+      source(sourcepatch,local = T);
+      file.rename(sourcepatch,paste0(sourcepatch,'.bak'));
+    }
   }
   close(pb);
   if('iilm' %in% ls(dataenv)) dataenv$iilm <- with(dataenv,update(iilm)) else {
@@ -304,6 +320,8 @@ samplephis <- function(dataenv,logenv,errenv
                                  ,')^2'));
       iilm <- lm(rformula,data=data.frame(phis))});
   }
+  dataenv$calls[paste0('iter',iter)] <- sys.call();
+  
   return(dataenv);
 }
 #' ### Here we try it
