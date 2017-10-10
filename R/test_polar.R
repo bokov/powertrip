@@ -226,6 +226,13 @@ estimate_rs <- function(data,rlist=list(),power=0.8,...){
   rlist;
 }
 
+pt_plot <- function(dataenv,coords=c('cartesian','polar'),...){
+  trfun <- switch(match.arg(coords),cartesian=pol2crt,polar=identity); 
+  dat<- cbind(trfun(cbind(dataenv$rs,dataenv$phis)),iters=dataenv$iters);
+  plot(dat[,1:2]);
+  points(dat[dat[,'iters']==1,1:2],col='red',pch='+')
+}
+
 samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
                        ,samples=200,dims=1,nworst=100
                        # at each phi, keep gathering simulations
@@ -320,8 +327,7 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
                                  ,')^2'));
       iilm <- lm(rformula,data=data.frame(phis))});
   }
-  dataenv$calls[paste0('iter',iter)] <- sys.call();
-  
+  dataenv$calls[paste0('iter',iter)] <- match.call();
   return(dataenv);
 }
 #' ### Here we try it
