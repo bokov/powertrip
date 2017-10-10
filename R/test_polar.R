@@ -144,17 +144,22 @@ sample_polar2 <- function(thetas,nn=20
                           ,rpred=NA # here we will put the result of dose.p()
                           ,est=0,se=Inf,n.se=2
                           ,simfun=ptsim_binom
-                          ,panfun=ptpnl_passthru){
+                          ,panfun=ptpnl_passthru
+                          ,...){
   if(!missing(rpred)) {est<-rpred[1];se=attr(rpred,'SE')};
   lbound <- max(est-n.se*se,minlims,0);
   ubound <- min(est+n.se*se,maxlims);
   if(lbound>ubound) return(matrix(NA,nrow=0,ncol=length(thetas)+1));
   oo<-cbind(r=runif(nn,lbound,ubound)
             ,rbind(thetas)[rep_len(1,nn),]);
-  #if(!is.na(simfun)){
-    oo<- cbind(oo,res=apply(pol2crt(oo),1,simfun));
-    # todo: add call to panfun
-  #}
+  if(!is.na(simfun)){
+    data <- result <- list();
+    oocr <- pol2crt(oo);
+    for(ii in 1:nn){
+      result[[ii]] <- panfun(simfun(oocr[ii,]),oocr[ii,],full=F);
+    }
+    oo<- cbind(oo,res=sapply(result,function(xx) xx$outcome));
+  }
   oo;
 }
 
