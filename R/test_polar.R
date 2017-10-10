@@ -138,6 +138,7 @@ sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
 
 #' This is a row-wise operation
 sample_polar2 <- function(thetas,nn=20
+                          ,maxs=maxs,mins=mins
                           ,maxlims=pollim(thetas,maxs=maxs,mins=mins)
                           ,minlims=0
                           ,rpred=NA # here we will put the result of dose.p()
@@ -145,7 +146,7 @@ sample_polar2 <- function(thetas,nn=20
                           ,simfun=ptsim_binom
                           ,panfun=ptpnl_passthru){
   if(!missing(rpred)) {est<-rpred[1];se=attr(rpred,'SE')};
-  oo<-cbind(r=runif(nn,max(est-n.se*se,minlims),min(est+n.se*se,maxlims))
+  oo<-cbind(r=runif(nn,max(est-n.se*se,minlims,0),min(est+n.se*se,maxlims))
             ,rbind(thetas)[rep_len(1,nn),]);
   #if(!is.na(simfun)){
     oo<- cbind(oo,res=apply(pol2crt(oo),1,ptsim_binom));
@@ -236,17 +237,26 @@ samplephis <- function(dataenv,logenv
   # rownames(phis) <- NULL;
   # TODO: catch length mismatches and missing variables from dataenv
   if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters','iilm'),ls(dataenv)))==0){
-    phise <- predict(dataenv$iilm,data.frame(phis0),se.fit=T)$se.fit;
-    phis0 <- phis0[which(rank(1-phise)<=nworst),,drop=F];
+    phipr <- predict(dataenv$iilm,data.frame(phis0),se.fit=T);
+    phis0 <- phis0[phikeep <- which(rank(1-phipr$se.fit)<=nworst),,drop=F];
+    phipr <- lapply(phipr,function(xx) xx[phikeep,]);
     iter <- dataenv$iters + 1;
   } else {
     dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- dataenv$cycle <- c();
+    phipr <- list(fit=rep_len(0,nrow(phis0)),se.fit=rep_len(Inf,nrow(phis0)));
     iter <- 1;
   }
   #itername <- paste0('iter',iter);
   pb <- txtProgressBar(0,nrow(phis0),style=3);
   for(ii in 1:nrow(phis0)){
-    iilist <- estimate_rs(iisims <- sample_polar2(iiphis<-phis0[ii,]),power=power);
+    iiphis <- phis0[ii,];
+    iilist <- estimate_rs(
+      iisims <- sample_polar2(iiphis
+                              ,maxlims=pollim(iiphis,maxs=maxs,mins=mins)
+                              ,est = phipr$fit[ii]
+                              ,se = phipr$se.fit[ii]
+                              ,n.se = 3)
+      ,power=power);
     iiname <- paste0('x_',paste0(iiphis,collapse='_'));
     # put next two lines inside sample_polar2?
     #colnames(iisims) <- c('r',colnames(phis),'res');
@@ -254,7 +264,7 @@ samplephis <- function(dataenv,logenv
     cycle0 <- 0;
     while(iilist$iipr[2]*tolse>tol){
       iilist<-estimate_rs(
-        iisims<-rbind(iisims,sample_polar2(iiphis,rpred=iilist$iiprinv))
+        iisims<-rbind(iisims,sample_polar2(iiphis,maxlims=pollim(iiphis,maxs=maxs,mins=mins),rpred=iilist$iiprinv))
         ,power=power);
       cycle0 <- cycle0 + 1;
     }
@@ -269,15 +279,18 @@ samplephis <- function(dataenv,logenv
   }
   close(pb);
   if('iilm' %in% ls(dataenv)) dataenv$iilm <- update(dataenv$iilm) else {
-    rformula <- formula(paste0('rs~('
-                               ,paste0('sin('
-                                       ,colnames(phis)
-                                       ,')+cos('
-                                       ,colnames(phis),')'
-                                       ,collapse='+')
-                               ,')^2'));
-    environment(rformula) <- dataenv;
-    dataenv$iilm <- with(dataenv,lm(rformula,data=data.frame(phis)));
+    #environment(rformula) <- dataenv;
+    #dataenv$iilm <- 
+    with(dataenv,{
+      phinames <- colnames(phis);
+      rformula <- formula(paste0('rs~('
+                                 ,paste0('sin('
+                                         ,phinames
+                                         ,')+cos('
+                                         ,phinames,')'
+                                         ,collapse='+')
+                                 ,')^2'));
+      iilm <- lm(rformula,data=data.frame(phis))});
   }
   return(dataenv);
 }
