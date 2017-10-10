@@ -209,34 +209,104 @@ selcoords <- function(xx,withpreds=F
   if(withpreds) return(cbind(keep=out,preds=preds$fit,se.fit=preds$se.fit,normpreds=nrmpreds)) else return(out);
 }
 
+estimate_rs <- function(data,rlist=list(),power=0.8,...){
+  if(!'iiglm' %in% rlist) {
+    rlist$iiglm <- glm(res~r,data.frame(data),family='binomial');
+  } else rlist$iiglm <- update(rlist$iiglm);
+  rlist$iiprinv <- MASS::dose.p(rlist$iiglm,p=power);
+  # TODO: check for rlist$iiprinv[1] being infinite
+  rlist$iiprinv <- c(rlist$iiprinv[1],attr(rlist$iiprinv,'SE'));
+  rlist$iipr <- with(predict(rlist$iiglm,newdata = data.frame(r=rlist$iiprinv[1])
+                       ,type='resp',se.fit=T)
+               ,c(fit,se.fit));
+  rlist;
+}
+
+samplephis <- function(dataenv,logenv
+                       ,samples=100,dims=1,nworst=100
+                       # at each phi, keep gathering simulations
+                       # on sampled r's until tolse*se.fit < tol
+                       ,power=0.8,tol=0.01,tolse=1
+                       ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
+                       ,...){
+  if(missing(dataenv)) dataenv <- new.env();
+  on.exit(return(dataenv))
+  phis <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
+  colnames(phis) <- paste0('phi',seq_len(dims));
+  rownames(phis) <- NULL;
+  # TODO: catch length mismatches and missing variables from dataenv
+  if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters'),ls(dataenv)))==0){
+    print('predict.lm code goes here');
+    iter <- dataenv$iters + 1;
+  } else {
+    dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- c();
+    iter <- 1;
+  }
+  #itername <- paste0('iter',iter);
+  for(ii in 1:nrow(phis)){
+    iilist <- estimate_rs(iisims <- sample_polar2(iiphis<-phis[ii,]),power=power);
+    iiname <- paste0('x_',paste0(iiphis,collapse='_'));
+    # put next two lines inside sample_polar2?
+    #colnames(iisims) <- c('r',colnames(phis),'res');
+    #rownames(iisims) <- NULL;
+    while(iilist$iipr[2]*tolse>tol){
+      iilist<-estimate_rs(
+        iisims<-rbind(iisims,sample_polar2(iiphis,rpred=iilist$iiprinv))
+        ,power=power);
+    }
+    # Now, actually retain the last result
+    dataenv$rs[iiname] <- iilist$iiprinv[1];
+    dataenv$r_ses[iiname] <- iilist$iiprinv[2];
+    dataenv$iters[iiname] <- iter;
+    dataenv$phis <- rbind(dataenv$phis,iiphis);
+    rownames(dataenv$phis)[ncol(dataenv$phis)] <- iiname;
+    cat(iiname,' ');
+  }
+  if('iilm' %in% ls(dataenv)) dataenv$iilm <- update(dataenv$iilm) else {
+    rformula <- formula(paste0('rs~('
+                               ,paste0('sin('
+                                       ,colnames(phis)
+                                       ,')+cos('
+                                       ,colnames(phis),')'
+                                       ,collapse='+')
+                               ,')^2'));
+    environment(rformula) <- dataenv;
+    dataenv$iilm <- with(dataenv,lm(rformula,data=data.frame(phis)));
+  }
+  return(dataenv);
+}
 #' ### Here we try it
 #' 
 #maxes <- c(1.5,1.8); mins<-c(-1.65,-2.3);
 maxs <- c(4,3); mins <- c(-2,-4);
 #ctr <- c(0.3,-0.2); # okay, so the center parameter works...
-ctr <- c(0,0);
+#ctr <- c(0,0);
+#' First, create the dataenv
+foo<-samplephis(maxs=maxs,mins=mins);
 #' Sample from a polar space immediately converting to cartesian
 #' TODO: create a sample_polar function
 #thetas<-cbind(theta=runif(1000,0,2*pi));
-ii <- 3;
+#ii <- 3;
 #ban <- (cbind(rlim=apply(thetas,1,pollim,maxs=maxs,mins=mins),theta=thetas));
 #baz <- cbind(r=runif(100,0,ban[ii,'rlim']),theta=ban[ii,'theta']);
 #baz <- cbind(baz,res=apply(baz,1,function(xx) ptsim_binom(pol2crt(xx))));
-baz <- sample_polar2(runif(1,0,2*pi));
-bax <- glm(res~r,data.frame(baz),family='binomial');
-prdinv <- dose.p(bax,p=.8);
-prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
-                   ,type='resp',se.fit=T)
-           ,c(fit,se.fit));
-while(prdr[2]*1>0.01){
-  # sim0 <- cbind(r=runif(20,max(0,sum(print(prdinv)*c(1,-2))),sum(print(prdinv)*c(1,2))),theta=ban[ii,'theta']);
-  # sim0 <- cbind(sim0,res=apply(sim0,1,function(xx) ptsim_binom(pol2crt(xx))));
-  baz <- rbind(baz,sample_polar2(ban[ii,'theta'],rpred=prdinv));
-  prdinv <- MASS::dose.p(bax<-update(bax),p=.8);
-  prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
-                     ,type='resp',se.fit=T)
-             ,c(fit,se.fit));
-}
+# baz <- sample_polar2(runif(1,0,2*pi));
+# colnames(baz) <- c('r','theta','res');
+# rownames(baz) <- NULL;
+# bax <- glm(res~r,data.frame(baz),family='binomial');
+# prdinv <- dose.p(bax,p=.8);
+# prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
+#                    ,type='resp',se.fit=T)
+#            ,c(fit,se.fit));
+# while(prdr[2]*1>0.01){
+#   # sim0 <- cbind(r=runif(20,max(0,sum(print(prdinv)*c(1,-2))),sum(print(prdinv)*c(1,2))),theta=ban[ii,'theta']);
+#   # sim0 <- cbind(sim0,res=apply(sim0,1,function(xx) ptsim_binom(pol2crt(xx))));
+#   baz <- rbind(baz,sample_polar2(baz[ii,'theta'],rpred=prdinv));
+#   prdinv <- MASS::dose.p(bax<-update(bax),p=.8);
+#   prdr<-with(predict(bax,newdata = data.frame(r=prdinv[1])
+#                      ,type='resp',se.fit=T)
+#              ,c(fit,se.fit));
+# }
 #' View the sampled points and the outcome
 dim(baz);
 plot(predict(bax,type='response')~baz[,'r'],col='red',ylim=c(0,1),pch='.');
