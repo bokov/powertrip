@@ -149,7 +149,7 @@ sample_polar2 <- function(thetas,nn=20
   oo<-cbind(r=runif(nn,max(est-n.se*se,minlims,0),min(est+n.se*se,maxlims))
             ,rbind(thetas)[rep_len(1,nn),]);
   #if(!is.na(simfun)){
-    oo<- cbind(oo,res=apply(pol2crt(oo),1,ptsim_binom));
+    oo<- cbind(oo,res=apply(pol2crt(oo),1,simfun));
     # todo: add call to panfun
   #}
   oo;
@@ -250,9 +250,9 @@ samplephis <- function(dataenv,logenv
   pb <- txtProgressBar(0,nrow(phis0),style=3);
   for(ii in 1:nrow(phis0)){
     iiphis <- phis0[ii,];
+    maxlims0 <- pollim(iiphis,maxs=maxs,mins=mins);
     iilist <- estimate_rs(
-      iisims <- sample_polar2(iiphis
-                              ,maxlims=pollim(iiphis,maxs=maxs,mins=mins)
+      iisims <- sample_polar2(iiphis,maxlims=maxlims0
                               ,est = phipr$fit[ii]
                               ,se = phipr$se.fit[ii]
                               ,n.se = 3)
@@ -262,19 +262,24 @@ samplephis <- function(dataenv,logenv
     #colnames(iisims) <- c('r',colnames(phis),'res');
     #rownames(iisims) <- NULL;
     cycle0 <- 0;
-    while(iilist$iipr[2]*tolse>tol){
+    failed <- F;
+    while(iilist$iipr[2]*tolse>tol&&!failed){
+      # TODO: if the estimate is out of bounds, give up and move on
       iilist<-estimate_rs(
-        iisims<-rbind(iisims,sample_polar2(iiphis,maxlims=pollim(iiphis,maxs=maxs,mins=mins),rpred=iilist$iiprinv))
+        iisims<-rbind(iisims,sample_polar2(iiphis,maxlims=maxlims0,rpred=iilist$iiprinv))
         ,power=power);
       cycle0 <- cycle0 + 1;
+      if(cycle0 > 1 && (iilist$iiprinv[1]>maxlims0||iilist$iiprinv[1]<0)) failed <- T;
     }
     # Now, actually retain the last result
-    dataenv$rs[iiname] <- iilist$iiprinv[1];
-    dataenv$r_ses[iiname] <- iilist$iiprinv[2];
-    dataenv$iters[iiname] <- iter;
-    dataenv$cycle[iiname] <- cycle0;
-    dataenv$phis <- rbind(dataenv$phis,iiphis);
-    rownames(dataenv$phis)[ncol(dataenv$phis)] <- iiname;
+    if(failed) {browser()} else {
+      dataenv$rs[iiname] <- iilist$iiprinv[1];
+      dataenv$r_ses[iiname] <- iilist$iiprinv[2];
+      dataenv$iters[iiname] <- iter;
+      dataenv$cycle[iiname] <- cycle0;
+      dataenv$phis <- rbind(dataenv$phis,iiphis);
+      rownames(dataenv$phis)[ncol(dataenv$phis)] <- iiname;
+    }
     setTxtProgressBar(pb,ii);
   }
   close(pb);
