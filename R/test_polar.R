@@ -248,20 +248,21 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
                        # name of file that will be sourced (once and then moved) if found
                        ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
                        ,...){
+  tt <- proc.time();
   if(missing(dataenv)) dataenv <- new.env();
   on.exit(save(dataenv,logenv,errenv,file=savefile));
   phis0 <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
   colnames(phis0) <- paste0('phi',seq_len(dims));
   # rownames(phis) <- NULL;
   # TODO: catch length mismatches and missing variables from dataenv
-  if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters','iilm','calls'),ls(dataenv)))==0){
+  if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters','iilm','calls','times'),ls(dataenv)))==0){
     phipr <- predict(dataenv$iilm,data.frame(phis0),se.fit=T);
     phis0 <- phis0[phikeep <- which(rank(1-phipr$se.fit)<=nworst),,drop=F];
     phipr <- lapply(phipr,function(xx) xx[phikeep]);
     iter <- tail(dataenv$iters,1) + 1;
   } else {
     dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- dataenv$cycle <- c();
-    dataenv$calls <- list();
+    dataenv$calls <- dataenv$times <- list();
     phipr <- list(fit=rep_len(0,nrow(phis0)),se.fit=rep_len(Inf,nrow(phis0)));
     iter <- 1;
   }
@@ -328,6 +329,7 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
       iilm <- lm(rformula,data=data.frame(phis))});
   }
   dataenv$calls[paste0('iter',iter)] <- match.call();
+  dataenv$times[paste0('iter',iter)] <- proc.time() - tt;
   return(dataenv);
 }
 #' ### Here we try it
