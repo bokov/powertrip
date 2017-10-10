@@ -230,38 +230,44 @@ samplephis <- function(dataenv,logenv
                        ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
                        ,...){
   if(missing(dataenv)) dataenv <- new.env();
-  on.exit(return(dataenv))
-  phis <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
-  colnames(phis) <- paste0('phi',seq_len(dims));
-  rownames(phis) <- NULL;
+  on.exit(return(dataenv));
+  phis0 <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
+  colnames(phis0) <- paste0('phi',seq_len(dims));
+  # rownames(phis) <- NULL;
   # TODO: catch length mismatches and missing variables from dataenv
-  if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters'),ls(dataenv)))==0){
-    print('predict.lm code goes here');
+  if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters','iilm'),ls(dataenv)))==0){
+    phise <- predict(dataenv$iilm,data.frame(phis0),se.fit=T)$se.fit;
+    phis0 <- phis0[which(rank(1-phise)<=nworst),,drop=F];
     iter <- dataenv$iters + 1;
   } else {
-    dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- c();
+    dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- dataenv$cycle <- c();
     iter <- 1;
   }
   #itername <- paste0('iter',iter);
-  for(ii in 1:nrow(phis)){
-    iilist <- estimate_rs(iisims <- sample_polar2(iiphis<-phis[ii,]),power=power);
+  pb <- txtProgressBar(0,nrow(phis0),style=3);
+  for(ii in 1:nrow(phis0)){
+    iilist <- estimate_rs(iisims <- sample_polar2(iiphis<-phis0[ii,]),power=power);
     iiname <- paste0('x_',paste0(iiphis,collapse='_'));
     # put next two lines inside sample_polar2?
     #colnames(iisims) <- c('r',colnames(phis),'res');
     #rownames(iisims) <- NULL;
+    cycle0 <- 0;
     while(iilist$iipr[2]*tolse>tol){
       iilist<-estimate_rs(
         iisims<-rbind(iisims,sample_polar2(iiphis,rpred=iilist$iiprinv))
         ,power=power);
+      cycle0 <- cycle0 + 1;
     }
     # Now, actually retain the last result
     dataenv$rs[iiname] <- iilist$iiprinv[1];
     dataenv$r_ses[iiname] <- iilist$iiprinv[2];
     dataenv$iters[iiname] <- iter;
+    dataenv$cycle[iiname] <- cycle0;
     dataenv$phis <- rbind(dataenv$phis,iiphis);
     rownames(dataenv$phis)[ncol(dataenv$phis)] <- iiname;
-    cat(iiname,' ');
+    setTxtProgressBar(pb,ii);
   }
+  close(pb);
   if('iilm' %in% ls(dataenv)) dataenv$iilm <- update(dataenv$iilm) else {
     rformula <- formula(paste0('rs~('
                                ,paste0('sin('
