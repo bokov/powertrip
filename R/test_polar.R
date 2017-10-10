@@ -278,7 +278,7 @@ samplephis <- function(dataenv,logenv,errenv
     }    
     # Now, actually retain the last result
     if(failed) {
-      errenv[[iiname]] <- list(cycle=cycle0,phis=iiphis,preds=iilist);
+      errenv[[iiname]] <- list(cycle=cycle0,phis=iiphis,preds=iilist,iter=iter);
       } else {
       dataenv$rs[iiname] <- iilist$iiprinv[1];
       dataenv$r_ses[iiname] <- iilist$iiprinv[2];
