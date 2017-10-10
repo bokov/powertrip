@@ -226,11 +226,11 @@ estimate_rs <- function(data,rlist=list(),power=0.8,...){
   rlist;
 }
 
-pt_plot <- function(dataenv,coords=c('cartesian','polar'),...){
+pt_plot <- function(dataenv,coords=c('cartesian','polar'),iter1col='red',iter1pch='+',...){
   trfun <- switch(match.arg(coords),cartesian=pol2crt,polar=identity); 
   dat<- cbind(trfun(cbind(dataenv$rs,dataenv$phis)),iters=dataenv$iters);
-  plot(dat[,1:2]);
-  points(dat[dat[,'iters']==1,1:2],col='red',pch='+')
+  plot(dat[,1:2],...);
+  points(dat[dat[,'iters']==1,1:2],col=iter1col,pch=iter1pch)
 }
 
 samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
@@ -294,7 +294,8 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
     }    
     # Now, actually retain the last result
     if(failed) {
-      errenv[[iiname]] <- list(cycle=cycle0,phis=iiphis,preds=iilist,iter=iter);
+      errenv[[iiname]] <- list(cycle=cycle0,phis=iiphis
+                               ,preds=iilist,iter=iter);
       } else {
       dataenv$rs[iiname] <- iilist$iiprinv[1];
       dataenv$r_ses[iiname] <- iilist$iiprinv[2];
