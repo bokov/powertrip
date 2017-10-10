@@ -146,7 +146,10 @@ sample_polar2 <- function(thetas,nn=20
                           ,simfun=ptsim_binom
                           ,panfun=ptpnl_passthru){
   if(!missing(rpred)) {est<-rpred[1];se=attr(rpred,'SE')};
-  oo<-cbind(r=runif(nn,max(est-n.se*se,minlims,0),min(est+n.se*se,maxlims))
+  lbound <- max(est-n.se*se,minlims,0);
+  ubound <- min(est+n.se*se,maxlims);
+  if(lbound>ubound) return(matrix(NA,nrow=0,ncol=length(thetas)+1));
+  oo<-cbind(r=runif(nn,lbound,ubound)
             ,rbind(thetas)[rep_len(1,nn),]);
   #if(!is.na(simfun)){
     oo<- cbind(oo,res=apply(pol2crt(oo),1,simfun));
@@ -223,14 +226,15 @@ estimate_rs <- function(data,rlist=list(),power=0.8,...){
   rlist;
 }
 
-samplephis <- function(dataenv,logenv
-                       ,samples=100,dims=1,nworst=100
+samplephis <- function(dataenv,logenv,errenv
+                       ,samples=200,dims=1,nworst=100
                        # at each phi, keep gathering simulations
                        # on sampled r's until tolse*se.fit < tol
                        ,power=0.8,tol=0.01,tolse=1
                        ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
                        ,...){
   if(missing(dataenv)) dataenv <- new.env();
+  if(missing(errenv)) errenv <- new.env();
   on.exit(return(dataenv));
   phis0 <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
   colnames(phis0) <- paste0('phi',seq_len(dims));
@@ -239,8 +243,8 @@ samplephis <- function(dataenv,logenv
   if(length(setdiff(c('rs','phis','r_ses','phi_ses','iters','iilm'),ls(dataenv)))==0){
     phipr <- predict(dataenv$iilm,data.frame(phis0),se.fit=T);
     phis0 <- phis0[phikeep <- which(rank(1-phipr$se.fit)<=nworst),,drop=F];
-    phipr <- lapply(phipr,function(xx) xx[phikeep,]);
-    iter <- dataenv$iters + 1;
+    phipr <- lapply(phipr,function(xx) xx[phikeep]);
+    iter <- tail(dataenv$iters,1) + 1;
   } else {
     dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- dataenv$cycle <- c();
     phipr <- list(fit=rep_len(0,nrow(phis0)),se.fit=rep_len(Inf,nrow(phis0)));
@@ -250,29 +254,32 @@ samplephis <- function(dataenv,logenv
   pb <- txtProgressBar(0,nrow(phis0),style=3);
   for(ii in 1:nrow(phis0)){
     iiphis <- phis0[ii,];
-    maxlims0 <- pollim(iiphis,maxs=maxs,mins=mins);
-    iilist <- estimate_rs(
-      iisims <- sample_polar2(iiphis,maxlims=maxlims0
-                              ,est = phipr$fit[ii]
-                              ,se = phipr$se.fit[ii]
-                              ,n.se = 3)
-      ,power=power);
     iiname <- paste0('x_',paste0(iiphis,collapse='_'));
-    # put next two lines inside sample_polar2?
-    #colnames(iisims) <- c('r',colnames(phis),'res');
-    #rownames(iisims) <- NULL;
-    cycle0 <- 0;
+    maxlims0 <- pollim(iiphis,maxs=maxs,mins=mins);
+    iisims <- sample_polar2(iiphis,maxlims=maxlims0
+                            ,est = phipr$fit[ii]
+                            ,se = phipr$se.fit[ii]
+                            ,n.se = 3);
     failed <- F;
-    while(iilist$iipr[2]*tolse>tol&&!failed){
-      # TODO: if the estimate is out of bounds, give up and move on
-      iilist<-estimate_rs(
-        iisims<-rbind(iisims,sample_polar2(iiphis,maxlims=maxlims0,rpred=iilist$iiprinv))
-        ,power=power);
-      cycle0 <- cycle0 + 1;
-      if(cycle0 > 1 && (iilist$iiprinv[1]>maxlims0||iilist$iiprinv[1]<0)) failed <- T;
-    }
+    cycle0 <- 0;
+    if(nrow(iisims)==0) {failed <- T;iilist<-NA} else {
+      iilist <- estimate_rs(iisims,power=power);
+      # put next two lines inside sample_polar2?
+      #colnames(iisims) <- c('r',colnames(phis),'res');
+      #rownames(iisims) <- NULL;
+      while(iilist$iipr[2]*tolse>tol&&!failed){
+        # TODO: if the estimate is out of bounds, give up and move on
+        iilist<-estimate_rs(
+          iisims<-rbind(iisims,sample_polar2(iiphis,maxlims=maxlims0,rpred=iilist$iiprinv))
+          ,power=power);
+        cycle0 <- cycle0 + 1;
+        if(cycle0 > 1 && (iilist$iiprinv[1]>maxlims0||iilist$iiprinv[1]<0)) failed <- T;
+      }
+    }    
     # Now, actually retain the last result
-    if(failed) {browser()} else {
+    if(failed) {
+      errenv[[iiname]] <- list(cycle=cycle0,phis=iiphis,preds=iilist);
+      } else {
       dataenv$rs[iiname] <- iilist$iiprinv[1];
       dataenv$r_ses[iiname] <- iilist$iiprinv[2];
       dataenv$iters[iiname] <- iter;
@@ -283,7 +290,7 @@ samplephis <- function(dataenv,logenv
     setTxtProgressBar(pb,ii);
   }
   close(pb);
-  if('iilm' %in% ls(dataenv)) dataenv$iilm <- update(dataenv$iilm) else {
+  if('iilm' %in% ls(dataenv)) dataenv$iilm <- with(dataenv,update(iilm)) else {
     #environment(rformula) <- dataenv;
     #dataenv$iilm <- 
     with(dataenv,{
@@ -395,15 +402,15 @@ points(spol[selcoords(spol,type='quantile'),1:2],pch='*');
 #' 
 #' The other alternative is to ...
 #' 
-#' 1. Randomly sample from the thetas
-#' 2. At each point on thetas 
-#'   1. Exclude those going beyond limits, RETAIN: smallest excluded r
-#'   2. If too few left, resample within above limit
-#'   3. Simulate from 0 to 1. RETAIN: result
-#'   4. Fit a univariate logistic model with r as predictor
-#'   5. Select all predicted values within 3*se.fit of 0.8
-#'   6. RETAIN: max and min r's corresponding to those values
-#' 3. At subsequent iterations...
-#'   1. At each r, predict the min-r and the smaller of max-r or exclusion zone
-#'   2. Now only simulate between these two points
-#'   3. RETAIN: result, smallest excluded, max-r, min-r
+#' 1. DONE Randomly sample from the thetas
+#' 2. DONE At each point on thetas 
+#'   1. DONE Exclude those going beyond limits, -RETAIN: smallest excluded r- (no longer necessary)
+#'   2. DONE If too few left, resample within above limit
+#'   3. DONE Simulate from 0 to 1. RETAIN: (best) result
+#'   4. DONE Fit a univariate logistic model with r as predictor
+#'   5. DONE Select all predicted values within 3*se.fit of 0.8
+#'   6. DONE RETAIN: max and min r's corresponding to those values
+#' 3. DONE At subsequent iterations...
+#'   1. DONE At each r, predict the min-r and the smaller of max-r or exclusion zone
+#'   2. DONE Now only simulate between these two points
+#'   3. DONE RETAIN: result, smallest excluded, max-r, min-r
