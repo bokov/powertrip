@@ -98,8 +98,8 @@ ptpnl_qntile <- new.ptpnl("qntile"
 #' you can see how each of them were created
 #sapply(baz,attr,'call');
 #' Of course you can evaluate them all on the same dataset, the main purpose of them
-logenv <- new.env();
-for(ii in names(baz)) baz[[ii]](mtcars,c(-1,1),logenv=logenv,index=ii);
+#logenv <- new.env();
+#for(ii in names(baz)) baz[[ii]](mtcars,c(-1,1),logenv=logenv,index=ii);
 
 #' getCall method for a ptpnl_fn function.
 getCall.ptpnl_fn <- function(xx,...) attr(xx,'call');
