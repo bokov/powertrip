@@ -29,8 +29,16 @@ ptsim_2lin <- function(coords,nn=100,refcoords=rep_len(0,length(coords)),...){
 }
 
 new.ptpnl <- function(fname,fit,result,eval,...){
+  # we use substitute on the fit and result arguments to turn them into 
+  # unevaluated calls from whatever fragile state they are before they are 
+  # first evaluated
   fit <- substitute(fit); result <- substitute(result); 
+  # we also need to do that to the eval argument but that one is optional, if 
+  # missing it means the user wants this function to return summary results but
+  # no T/F evaluation so we first check if it's missing
   if(!missing(eval)) eval <- substitute(eval);
+  # below is our template for the function-- the commented parts will get
+  # inserted or altered
   oo <- function(data,coords,logenv=NULL,errenv=NULL,index,pninfo=F,...){
     if(pninfo){
       return(NA); # metadata about function goes here -- fname and eval T/F
@@ -43,11 +51,23 @@ new.ptpnl <- function(fname,fit,result,eval,...){
       NA  # summary result goes here if(!is.na(logenv)) logenv[[index]]
     }
   };
+  # we make the default value for the index variable be that of fname
+  formals(oo)$index <- fname;
+  # below is the metadata our function will return if its pninfo argument is 
+  # set to TRUE
   body(oo)[[2]][[3]][[2]][[2]] <- list(fname=fname,eval=!missing(eval));
+  # Below is where the fit for this function gets created. This is done in two
+  # steps so that only the second occurrence of fit is substituted
   body(oo)[[3]] <- substitute(FIT <- try(fit));
   body(oo)[[3]][[2]] <- quote(fit);
+  # If the function is supposed to return a TRUE/FALSE value, return NA when 
+  # there is an error, otherwise, if it isn't supposed to return anything then
+  # don't do anything 
   if(!missing(eval)) body(oo)[[4]][[3]][[3]] <- quote(return(NA));
+  # Here we make the function return the results of its eval statement to a named
+  # entry in the logenv environment... but only if it exists
   body(oo)[[4]][[4]][[2]] <- substitute(if(!is.null(logenv)) logenv[[index]] <- result);
+  # we return our TRUE/FALSE result, if this is a function that returns a value
   if(!missing(eval)) body(oo)[[5]] <- substitute(return(eval));
   oo;
 }
