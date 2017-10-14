@@ -53,7 +53,28 @@ new.ptpnl <- function(fname,fit,result,eval,...){
 }
 
 #' Panels
-ptpnl_passthru <- function(data,coords=NULL,...){
+ptpnl_passthru <- function (data, coords, logenv = NULL, errenv = NULL, index, 
+          pninfo = F, ...) 
+{
+  if (pninfo) {
+    return(list(fname = "passthru", eval = TRUE))
+  }
+  fit <- try(data[1])
+  if (is(fit, "try-error")) {
+    if (!is.null(errenv)) 
+      errenv[[index]] <- fit
+    return(NA)
+  }
+  else {
+    if (!is.null(logenv)) 
+      logenv[[index]] <- list(summary = fit[1], coords = coords, 
+                              call = sys.call(sys.parent()))
+  }
+  return(fit[1])
+}
+
+#' 
+ptpnl_passthru.bak <- function(data,coords=NULL,...){
   list(outcome=data
        ,coords=coords
        ,call=sys.call(sys.parent()));
