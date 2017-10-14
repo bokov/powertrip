@@ -28,6 +28,30 @@ ptsim_2lin <- function(coords,nn=100,refcoords=rep_len(0,length(coords)),...){
   return(rbind(ooc,oot));
 }
 
+new.ptpnl <- function(fname,fit,result,eval,...){
+  fit <- substitute(fit); result <- substitute(result); 
+  if(!missing(eval)) eval <- substitute(eval);
+  oo <- function(data,coords,logenv=NULL,errenv=NULL,index,pninfo=F,...){
+    if(pninfo){
+      return(NA); # metadata about function goes here -- fname and eval T/F
+    }
+    NA # fit goes here
+    if(is(fit,'try-error')){
+      if(!is.null(errenv)) errenv[[index]] <- fit;
+      # return(NA) goes here if !missing(eval)
+    } else {
+      NA  # summary result goes here if(!is.na(logenv)) logenv[[index]]
+    }
+  };
+  body(oo)[[2]][[3]][[2]][[2]] <- list(fname=fname,eval=!missing(eval));
+  body(oo)[[3]] <- substitute(FIT <- try(fit));
+  body(oo)[[3]][[2]] <- quote(fit);
+  if(!missing(eval)) body(oo)[[4]][[3]][[3]] <- quote(return(NA));
+  body(oo)[[4]][[4]][[2]] <- substitute(if(!is.null(logenv)) logenv[[index]] <- result);
+  if(!missing(eval)) body(oo)[[5]] <- substitute(return(eval));
+  oo;
+}
+
 #' Panels
 ptpnl_passthru <- function(data,coords=NULL,...){
   list(outcome=data
