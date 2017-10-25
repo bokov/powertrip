@@ -28,6 +28,10 @@ ptsim_2lin <- function(coords,nn=100,refcoords=rep_len(0,length(coords)),...){
   return(rbind(ooc,oot));
 }
 
+#' TODO: in addition to a logenv object, return a character vector specifying a
+#' path through that logenv
+#' TODO: optional formula argument
+#' TODO: look in dots for additional arguments (with )
 new.ptpnl <- function(fname,fit,result,eval,...){
   # we use substitute on the fit and result arguments to turn them into 
   # unevaluated calls from whatever fragile state they are before they are 
@@ -37,26 +41,41 @@ new.ptpnl <- function(fname,fit,result,eval,...){
   # missing it means the user wants this function to return summary results but
   # no T/F evaluation so we first check if it's missing
   if(!missing(eval)) eval <- substitute(eval);
+  dots <- list(...);
+  #if(is.null(frm)) warning('If your model fit function uses a formula, please consider setting that argument to "frm" and then setting the "frm" argument of your new.ptpnl() call to the actual formula. This will allow you to update just the formula without rebuilding the whole function.');
   # below is our template for the function-- the commented parts will get
   # inserted or altered
   # TODO: get rid of the pninfo feature, redundant with attributes
-  oo <- function(data,coords,logenv=NULL,errenv=NULL,index,pninfo=F,...){
-    if(pninfo){
+  oo <- function(data,coords,logenv=NULL,errenv=NULL,index=c(paste(c('x',coords),collapse ='_'),fname),...){
+    if(F){
       return(NA); # metadata about function goes here -- fname and eval T/F
     }
     NA # fit goes here
     if(is(fit,'try-error')){
-      if(!is.null(errenv)) errenv[[index]] <- fit;
+      # the first element of index, which is a character vector, is the object
+      # in the environment errenv; the rest are a path to the place where the
+      # output will be stored. It should always work to use indexes of length
+      # 2, otherwise may error if specified nodes do not already exist
+      if(!is.null(errenv)) errenv[[index[1]]][[index[-1]]] <- fit;
       # return(NA) goes here if !missing(eval)
     } else {
       NA  # summary result goes here if(!is.na(logenv)) logenv[[index]]
     }
   };
   # we make the default value for the index variable be that of fname
-  formals(oo)$index <- fname;
+  formals(oo)$index <- c('coords',fname);
+  for(ii in names(dots)) formals(oo)[[ii]] <- dots[[ii]];
+  if(!'frm' %in% names(formals(oo))) warning(
+   "  You did not specify the optional argument 'frm' when calling the new.ptpnl()
+    function. This is allowed, but if your fit argument relies on a formula it's
+    better to use frm instead of an explicit formula ( e.g. lm(frm,data) ) and 
+    specify the formula in the frm argument to new.ptpnl(). That way, you will 
+    be able to swap out what formula your fit function uses without having to 
+    build a separate function just for that."
+  );
   # below is the metadata our function will return if its pninfo argument is 
   # set to TRUE
-  body(oo)[[2]][[3]][[2]][[2]] <- list(fname=fname,eval=!missing(eval),call=match.call());
+  # body(oo)[[2]][[3]][[2]][[2]] <- list(fname=fname,eval=!missing(eval),call=match.call());
   # Below is where the fit for this function gets created. This is done in two
   # steps so that only the second occurrence of fit is substituted
   body(oo)[[3]] <- substitute(FIT <- try(fit));
@@ -67,7 +86,7 @@ new.ptpnl <- function(fname,fit,result,eval,...){
   body(oo)[[4]][[3]][[3]] <- if(missing(eval)) quote(return(NULL)) else quote(return(NA));
   # Here we make the function return the results of its eval statement to a named
   # entry in the logenv environment... but only if it exists
-  body(oo)[[4]][[4]][[2]] <- substitute(if(!is.null(logenv)) logenv[[index]] <- result);
+  body(oo)[[4]][[4]][[2]] <- substitute(if(!is.null(logenv)) logenv[[index[1]]][[index[-1]]] <- result);
   # we return our TRUE/FALSE result, if this is a function that returns a value
   if(missing(eval)) body(oo)[[5]] <- quote(return(NULL)) else {
     body(oo)[[5]] <- substitute(return(eval));
@@ -89,6 +108,13 @@ ptpnl_passthru <- new.ptpnl("passthru"
 ptpnl_qntile <- new.ptpnl("qntile"
                           , fit = quantile(data[, 1], c(0.05, 0.1, 0.5, 0.9, 0.95))
                           , result = list(summary = fit, coords = coords, call = match.call(expand.dots = T)));
+
+ptpnl_lm <- new.ptpnl("lm"
+                      , fit = lm(formula = frm, data)
+                      , result = broom::glance(fit)
+                      , eval = p.adjust(with(summary(fit), coefficients[, "Pr(>|t|)"][rownames(coefficients) %in% 
+                                                                                                matchterm])) < psig
+                      , frm = yy ~ ., psig = 0.05, matchterm = c("grouptreated", "grouptreated:xnum"))
 #' there can be a list of these, and they can repeat
 #baz<-c(ptpnl_passthru,ptpnl_qntile,ptpnl_passthru);
 #' you can generate names for them automatically
