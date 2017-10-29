@@ -136,7 +136,26 @@ sample_polar <- function(nn=1000,rmax=1,thetawrap=0.1
   return(list(spol=oo,scrt=oocr));
 }
 
+#' This is like `sample_polar2()` but only generates valid samples, doesn't run
+#' sims or tests
+sample_polar3 <- function(thetas,nn=20
+                          ,maxs=maxs,mins=mins
+                          ,maxlims=pollim(thetas,maxs=maxs,mins=mins)
+                          ,minlims=0
+                          ,rpred=NA # here we will put the result of dose.p()
+                          ,est=0,se=Inf,n.se=2
+                          ,simfun=ptsim_binom
+                          ,panfun=ptpnl_passthru
+                          ,...){
+  if(!missing(rpred)) {est<-rpred[1];se=attr(rpred,'SE')};
+  lbound <- max(est-n.se*se,minlims,0);
+  ubound <- min(est+n.se*se,maxlims);
+  if(lbound>ubound) return(matrix(NA,nrow=0,ncol=length(thetas)+1));
+  oo<-cbind(r=runif(nn,lbound,ubound)
+            ,rbind(thetas)[rep_len(1,nn),]);
+}
 #' This is a row-wise operation
+#' 
 sample_polar2 <- function(thetas,nn=20
                           ,maxs=maxs,mins=mins
                           ,maxlims=pollim(thetas,maxs=maxs,mins=mins)
@@ -152,13 +171,14 @@ sample_polar2 <- function(thetas,nn=20
   if(lbound>ubound) return(matrix(NA,nrow=0,ncol=length(thetas)+1));
   oo<-cbind(r=runif(nn,lbound,ubound)
             ,rbind(thetas)[rep_len(1,nn),]);
-  if(!is.na(simfun)){
+  if(!is.null(simfun)){
     data <- result <- list();
     oocr <- pol2crt(oo);
     for(ii in 1:nn){
       result[[ii]] <- panfun(simfun(oocr[ii,]),oocr[ii,],full=F);
     }
-    oo<- cbind(oo,res=sapply(result,function(xx) xx$outcome));
+    # this might not always work, but it at least seems to work 
+    oo<- cbind(oo,res=sapply(result,function(xx) xx[[1]]));
   }
   oo;
 }
@@ -244,6 +264,9 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
                        # on sampled r's until tolse*se.fit < tol
                        ,power=0.8,tol=0.01,tolse=1
                        ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
+                       # named list of functions to run on each sim, the pt-panel
+                       # ptpnl_qntile doesn't yet work
+                       ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)^2))
                        ,wd=paste0(getwd(),'/')
                        # when a file having the name specified by this variable is found, 
                        # the dataenv,logenv, and errenv objects are saved
@@ -277,13 +300,31 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
     iiphis <- phis0[ii,];
     iiname <- paste0('x_',paste0(iiphis,collapse='_'));
     maxlims0 <- pollim(iiphis,maxs=maxs,mins=mins);
+    # here is where we may diverge from the current ptsim and ptpnl
+    # This is a hardcoded test panel... the panel should be an argument
     iisims <- sample_polar2(iiphis,maxlims=maxlims0
                             ,est = phipr$fit[ii]
                             ,se = phipr$se.fit[ii]
+                            # to make it just return coordinates with no results...
+                            ,simfun = NULL 
                             ,n.se = 3);
+    # here we need to iterate over iisims, for each row creating a sim and running
+    # a panel on it
     failed <- F;
     cycle0 <- 0;
-    if(nrow(iisims)==0) {failed <- T;iilist<-NA} else {
+    if((jjnn<-nrow(iisims))==0) {failed <- T;iilist<-NA} else {
+      jjres <- list();
+      browser();
+      for(jj in 1:jjnn){
+        jjcoords <- iisims[jj,];
+        jjname <- paste0('r_',paste(jjcoords,collapse='_'));
+        jjdat <- ptsim_2lin(pol2crt(jjcoords));
+        jjres[[jj]] <- sapply(pnlst[1:2],function(xx) any(
+          xx(jjdat,jjcoords
+             ,logenv=logenv,errenv=errenv
+             ,index=c(jjname,attr(xx,'fname')))));
+      };
+      # here the test code stops, and the original code may break
       iilist <- estimate_rs(iisims,power=power);
       # put next two lines inside sample_polar2?
       #colnames(iisims) <- c('r',colnames(phis),'res');
