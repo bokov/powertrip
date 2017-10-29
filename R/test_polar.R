@@ -278,6 +278,8 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
                        ,...){
   tt <- proc.time();
   if(missing(dataenv)) dataenv <- new.env();
+  # identify which functions on the panel list return T/F results vs. summary only
+  pneval <- sapply(pnlst,attr,'eval');
   on.exit(save(dataenv,logenv,errenv,file=savefile));
   phis0 <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
   colnames(phis0) <- paste0('phi',seq_len(dims));
@@ -319,12 +321,19 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
         jjcoords <- iisims[jj,];
         jjname <- paste0('r_',paste(jjcoords,collapse='_'));
         jjdat <- ptsim_2lin(pol2crt(jjcoords));
-        jjres[[jj]] <- sapply(pnlst[1:2],function(xx) any(
+        jjres[[jj]] <- sapply(pnlst[pneval],function(xx) any(
           xx(jjdat,jjcoords
-             ,logenv=logenv,errenv=errenv
+             #,logenv=logenv
+             ,errenv=errenv
              ,index=c(jjname,attr(xx,'fname')))));
       };
       # here the test code stops, and the original code may break
+      # do.call(rbind,jjres) should return a matrix where each column is a result
+      # (yy) for a different one of the evaluating panel functions (i.e. have their
+      # eval attribute set to TRUE) and the iisims[,'r'] column is the predictor
+      # for a binomial model whose inverse prediction should approximate the values
+      # needed for the desired detection rate (the inverse prediction is currently
+      # handled by the estimate_rs() function)
       iilist <- estimate_rs(iisims,power=power);
       # put next two lines inside sample_polar2?
       #colnames(iisims) <- c('r',colnames(phis),'res');
