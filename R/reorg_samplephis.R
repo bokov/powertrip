@@ -34,21 +34,22 @@ preds_lims <- function(preds,tolse=1,tol=0.01,limit=Inf,radci=2,...){
   notdone <- preds['respse',]*tolse > tol;
   # if all panels failed, catch failure and signal accordingly
   if(!any(notfailed)) return(c(min=NA,max=NA,status=-1)); #TODO: log failure
-  if(!(status<-any(select <- notfailed & notdone))) select <- notfailed;
+  # if all non-failed panels converged, return final estimates with failed ones flagged
+  # if there are any non-failed non-converged panels
+  # returns a single max and min for the next round of radii based on those
+  if(status<-!any(select <- notfailed & notdone)) select <- notfailed;
   return(c(
      min=max(min(preds['radest',select] - preds['radse',select]*radci),0)
     ,max=min(max(preds['radest',select] + preds['radse',select]*radci),limit)
     ,status=status));
-  # if all non-failed panels converged, return final estimates with failed ones flagged
-  # if there are any non-failed non-converged panels
-  # returns a single max and min for the next round of radii based on those
 }
 
-lims_radii <- function(lims,phis,opts,...){
+#' Not needed, one liner: runif(nn,lims[1],lims[2]);
+#lims_radii <- function(lims,phis,opts,...){
   # using limits as provided by preds_lims() and a set of phis, uniformly sample
   # radii within those limits
   # returns a vector of radii
-}
+#}
 
 radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
   # using radii as provided by lims_radii() and phis, a vector of angles
@@ -61,10 +62,20 @@ radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
 testenv <- new.env();
 load('data/testdata.rda',envir = testenv);
 
-test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radii,...){
+test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radii
+                         ,phi=min(testenv$test_phis)
+                         ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
+                         ,nrads=20,...){
   # The function which will plug the above modules into each other and test them
   # jointly
-  # First fit models on the panel verdicts (T/F), tfresp
+  # First obtain the maximum allowed radius for the current phis
+  # (derived from the cartesian limits maxs and mins)
+  maxrad<-pollim(phi,maxs=maxs,mins=mins);
+  # then fit models on the panel verdicts (T/F), tfresp
   preds<-sapply(data.frame(do.call(rbind,list_tfresp)),resp_preds,radii=radii);
-  lims <- preds_lims(preds);
+  lims <- preds_lims(preds,limit=maxrad);
+  # create radii within the latest version of lims
+  oldradii <- radii;
+  radii <- runif(nrads,lims[1],lims[2]);
+  browser();
 }
