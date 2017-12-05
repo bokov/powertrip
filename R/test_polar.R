@@ -238,6 +238,18 @@ selcoords <- function(xx,withpreds=F
   if(withpreds) return(cbind(keep=out,preds=preds$fit,se.fit=preds$se.fit,normpreds=nrmpreds)) else return(out);
 }
 
+estimate_rs.new <- function(res,rr,glmfit,power=0.8,saveglm=F){
+  if(missing(glmfit)) {init<-T; glmfit <- glm(res~rr,family='binomial') } else {
+    init <- F; glmfit <- update(glmfit) };
+  out <- MASS::dose.p(glmfit,p=power);
+  out <- c(radest=as.vector(out[1])
+           ,radse=attr(out,'SE')
+           ,with(predict(glmfit,newdata=data.frame(rr=out[1]),type='resp',se.fit=T)
+                 ,c(respest=fit,respse=se.fit)));
+  if(init&&saveglm) attr(out,'glmfit') <- glmfit;
+  out;
+}
+
 estimate_rs <- function(data,rlist=list(),power=0.8,...){
   if(!'iiglm' %in% rlist) {
     rlist$iiglm <- glm(res~r,data.frame(data),family='binomial');
@@ -281,6 +293,7 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
   # identify which functions on the panel list return T/F results vs. summary only
   pneval <- sapply(pnlst,attr,'eval');
   on.exit(save(dataenv,logenv,errenv,file=savefile));
+  # create a matrix of randomly sampled angles 
   phis0 <- matrix(runif(samples*dims,0,2*pi),nrow=samples,ncol=dims);
   colnames(phis0) <- paste0('phi',seq_len(dims));
   # rownames(phis) <- NULL;
@@ -289,13 +302,14 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
     phipr <- predict(dataenv$iilm,data.frame(phis0),se.fit=T);
     phis0 <- phis0[phikeep <- which(rank(1-phipr$se.fit)<=nworst),,drop=F];
     phipr <- lapply(phipr,function(xx) xx[phikeep]);
-    iter <- tail(dataenv$iters,1) + 1;
   } else {
     dataenv$rs <- dataenv$phis <- dataenv$r_ses <- dataenv$phi_ses <- dataenv$cycle <- c();
+    dataenv$iters <- 0;
     dataenv$calls <- dataenv$times <- list();
     phipr <- list(fit=rep_len(0,nrow(phis0)),se.fit=rep_len(Inf,nrow(phis0)));
     iter <- 1;
   }
+  iter <- tail(dataenv$iters,1) + 1;
   #itername <- paste0('iter',iter);
   pb <- txtProgressBar(0,nrow(phis0),style=3);
   for(ii in 1:nrow(phis0)){
@@ -314,8 +328,8 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
     # a panel on it
     failed <- F;
     cycle0 <- 0;
+    jjres <- list();
     if((jjnn<-nrow(iisims))==0) {failed <- T;iilist<-NA} else {
-      jjres <- list();
       browser();
       for(jj in 1:jjnn){
         jjcoords <- iisims[jj,];
@@ -327,6 +341,7 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
              ,errenv=errenv
              ,index=c(jjname,attr(xx,'fname')))));
       };
+      browser();
       # here the test code stops, and the original code may break
       # do.call(rbind,jjres) should return a matrix where each column is a result
       # (yy) for a different one of the evaluating panel functions (i.e. have their
@@ -334,6 +349,10 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
       # for a binomial model whose inverse prediction should approximate the values
       # needed for the desired detection rate (the inverse prediction is currently
       # handled by the estimate_rs() function)
+      # initialize the glm models...
+      sapply(data.frame(do.call(rbind,jjres)),estimate_rs.new,rr=foo$r,simplify=F) -> ban;
+      # update them
+      mapply(function(aa,bb) estimate_rs.new(aa,rr=foo$r,glmfit=attr(bb,'glmfit')),data.frame(do.call(rbind,jjres)),ban);
       iilist <- estimate_rs(iisims,power=power);
       # put next two lines inside sample_polar2?
       #colnames(iisims) <- c('r',colnames(phis),'res');
@@ -346,7 +365,8 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
         cycle0 <- cycle0 + 1;
         if(cycle0 > 1 && (iilist$iiprinv[1]>maxlims0||iilist$iiprinv[1]<0)) failed <- T;
       }
-    }    
+    }
+
     # Now, actually retain the last result
     if(failed) {
       errenv[[iiname]] <- list(cycle=cycle0,phis=iiphis
@@ -388,6 +408,9 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
   dataenv$times[paste0('iter',iter)] <- proc.time() - tt;
   return(dataenv);
 }
+
+
+
 #' ### Here we try it
 #' 
 #maxes <- c(1.5,1.8); mins<-c(-1.65,-2.3);
