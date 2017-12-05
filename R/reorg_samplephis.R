@@ -64,18 +64,37 @@ load('data/testdata.rda',envir = testenv);
 
 test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radii
                          ,phi=min(testenv$test_phis)
+                         ,philabel=paste0('phi_',paste0(round(phi,2),collapse='_'))
                          ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
-                         ,nrads=20,...){
+                         ,nrads=20
+                         ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)^2))
+                         ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
-  # First obtain the maximum allowed radius for the current phis
+  # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
+  # rather than just summary statistics)
+  pneval <- sapply(pnlst,attr,'eval');
+  # obtain the maximum allowed radius for the current phis
   # (derived from the cartesian limits maxs and mins)
   maxrad<-pollim(phi,maxs=maxs,mins=mins);
-  # then fit models on the panel verdicts (T/F), tfresp
-  preds<-sapply(data.frame(do.call(rbind,list_tfresp)),resp_preds,radii=radii);
-  lims <- preds_lims(preds,limit=maxrad);
+  # lenght of current verdicts
+  nntf <- length(list_tfresp);
+  cycle <- 1;
+  lims <- c(min=0,max=maxrad,status=0);
+  list_tfresp <- list_radii <- list();
+  while(lims['status']<1){
+    list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']);
+    for(ii in 1:nrads){
+      iicoords <- c(list_radii[[cycle]][ii],phi);
+      iidat <- ptsim_2lin(pol2crt(iicoords));
+      list_tfresp[[ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
+      if(any(is.na(list_tfresp[[ii]]))) list_radii[[cycle]][ii] <- NA;
+    }
+    # then fit models on the panel verdicts (T/F), tfresp
+    preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
+    lims <- preds_lims(preds,limit=maxrad);
+    cycle <- cycle+1;
+  }
   # create radii within the latest version of lims
-  oldradii <- radii;
-  radii <- runif(nrads,lims[1],lims[2]);
   browser();
 }
