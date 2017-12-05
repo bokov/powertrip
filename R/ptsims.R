@@ -19,6 +19,9 @@ ptsim_binom <- function(coords,...){
 #' @export
 #'
 #' @examples simdata <- ptsim_2lin(c(4,-3),40);
+#' 
+#' This function works with coords vector > 2, silently ignoring the extras
+#' and the test_harness() function that calls this works also
 ptsim_2lin <- function(coords,nn=100,refcoords=rep_len(0,length(coords)),...){
   coords <- coords + refcoords;
   ooc <- data.frame(group='control',xnum=rnorm(nn));
@@ -32,7 +35,7 @@ ptsim_2lin <- function(coords,nn=100,refcoords=rep_len(0,length(coords)),...){
 #' path through that logenv
 #' TODO: optional formula argument
 #' TODO: look in dots for additional arguments (with )
-new.ptpnl <- function(fname,fit,result,eval,...){
+new.ptpnl <- function(fname,fit,result,eval.,...){
   # we use substitute on the fit and result arguments to turn them into 
   # unevaluated calls from whatever fragile state they are before they are 
   # first evaluated
@@ -40,7 +43,7 @@ new.ptpnl <- function(fname,fit,result,eval,...){
   # we also need to do that to the eval argument but that one is optional, if 
   # missing it means the user wants this function to return summary results but
   # no T/F evaluation so we first check if it's missing
-  if(!missing(eval)) eval <- substitute(eval);
+  if(!missing(eval.)) eval. <- substitute(eval.);
   dots <- list(...);
   #if(is.null(frm)) warning('If your model fit function uses a formula, please consider setting that argument to "frm" and then setting the "frm" argument of your new.ptpnl() call to the actual formula. This will allow you to update just the formula without rebuilding the whole function.');
   # below is our template for the function-- the commented parts will get
@@ -63,7 +66,9 @@ new.ptpnl <- function(fname,fit,result,eval,...){
     }
   };
   # we make the default value for the index variable be that of fname
-  formals(oo)$index <- c('coords',fname);
+  formals(oo)$callingframe <- substitute(parent.frame());
+  formals(oo)$philabel <- substitute(c(callingframe$philabel,'unknown')[1]);
+  formals(oo)$index <- substitute(c('coords',philabel,fname));
   for(ii in names(dots)) formals(oo)[[ii]] <- dots[[ii]];
   if(!'frm' %in% names(formals(oo))) warning(
    "  You did not specify the optional argument 'frm' when calling the new.ptpnl()
@@ -83,16 +88,17 @@ new.ptpnl <- function(fname,fit,result,eval,...){
   # If the function is supposed to return a TRUE/FALSE value, return NA when 
   # there is an error, otherwise, if it isn't supposed to return anything then
   # don't do anything 
-  body(oo)[[4]][[3]][[3]] <- if(missing(eval)) quote(return(NULL)) else quote(return(NA));
+  body(oo)[[4]][[3]][[3]] <- if(missing(eval.)) quote(return(NULL)) else quote(return(NA));
   # Here we make the function return the results of its eval statement to a named
   # entry in the logenv environment... but only if it exists
-  body(oo)[[4]][[4]][[2]] <- substitute(if(!is.null(logenv)) logenv[[index[1]]][[index[-1]]] <- result);
+  #body(oo)[[4]][[4]][[2]] <- substitute(if(!is.null(logenv)) logenv[[index[1]]][[index[-1]]] <- result);
+  body(oo)[[4]][[4]][[2]] <- substitute(if(!is.null(logenv)) {val.<-eval(result);deepassign(obj = logenv,path = index,val=val.)});
   # we return our TRUE/FALSE result, if this is a function that returns a value
-  if(missing(eval)) body(oo)[[5]] <- quote(return(NULL)) else {
-    body(oo)[[5]] <- substitute(return(eval));
+  if(missing(eval.)) body(oo)[[5]] <- quote(return(NULL)) else {
+    body(oo)[[5]] <- substitute(return(eval.));
   }
   attr(oo,'call') <- match.call();
-  attr(oo,'eval') <- !missing(eval);
+  attr(oo,'eval') <- !missing(eval.);
   attr(oo,'fname') <- fname;
   class(oo) <- c('ptpnl_fn',class(oo));
   oo;
@@ -105,14 +111,34 @@ ptpnl_passthru <- new.ptpnl("passthru"
                             , result = list(summary = fit, coords = coords, call = match.call(expand.dots = T))
                             , eval = fit[1] == 1);
 #' panel function to be used just for generating a summary result
+
 ptpnl_qntile <- new.ptpnl("qntile"
                           , fit = quantile(data[, 1], c(0.05, 0.1, 0.5, 0.9, 0.95))
                           , result = list(summary = fit, coords = coords, call = match.call(expand.dots = T)));
 
+
+ptpnl_summary <- new.ptpnl('summ'
+                           ,fit = split(data.frame(data),data.frame(data)[,1])
+                           #,cycles.=quote(cycle)
+                           #,nsims.=quote(length(list_tfresp))
+                           #,phi.=quote(phi)
+                           ,time=quote(Sys.time())
+                           ,literals=c('coords','cycle','phi','preds')
+                           #,philabel_= quote(callingframe$philabel)
+                           #,preds.=quote(preds)
+                           #,philabel_=quote(philabel)
+                           ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
+                                       ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
+                                       ,nsims=length(callingframe$list_tfresp)
+                                       ,time=time)
+                                          # ,preds=preds,phi=phi,time=time,cycles=cycles,nsims=nsims)
+                           #,index=substitute(c('coords',`philabel_`,'summ')));
+);
+
 ptpnl_lm <- new.ptpnl("lm"
                       , fit = lm(formula = frm, data)
                       , result = broom::glance(fit)
-                      , eval = p.adjust(with(summary(fit), coefficients[, "Pr(>|t|)"][rownames(coefficients) %in% 
+                      , eval. = p.adjust(with(summary(fit), coefficients[, "Pr(>|t|)"][rownames(coefficients) %in% 
                                                                                                 matchterm])) < psig
                       , frm = yy ~ ., psig = 0.05, matchterm = c("grouptreated", "grouptreated:xnum"))
 #' there can be a list of these, and they can repeat
@@ -206,7 +232,6 @@ deepassign <- function(obj,path,val,append=T){
   # at this point we have an obj that should be capable of taking an 
   # assignment to the final name of path regardless
   finalpath <- paste0(parsepath,"[['",tail(path,1),"']]");
-  browser();
   if(append){
     lorig <- eval(parse(text=paste0('length(',finalpath,')')));
     eval(parse(text=paste0(finalpath,"[[",lorig+1,"]]<-val")));

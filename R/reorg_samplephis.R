@@ -62,23 +62,25 @@ radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
 testenv <- new.env();
 load('data/testdata.rda',envir = testenv);
 
-test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radii
-                         ,phi=min(testenv$test_phis)
+test_harness <- function(#list_tfresp=testenv$test_tfresp,radii=testenv$test_radii
+                         phi=min(testenv$test_phis)
                          ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
                          ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
                          ,nrads=20
-                         ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)^2))
+                         ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)^2),summ=ptpnl_summary)
                          ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
   # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
   # rather than just summary statistics)
   pneval <- sapply(pnlst,attr,'eval');
+  pnfit <- names(pneval)[pneval];
+  pninfo <- names(pneval)[!pneval];
   # obtain the maximum allowed radius for the current phis
   # (derived from the cartesian limits maxs and mins)
   maxrad<-pollim(phi,maxs=maxs,mins=mins);
   # lenght of current verdicts
-  nntf <- length(list_tfresp);
+  #nntf <- length(list_tfresp);
   cycle <- 1;
   lims <- c(min=0,max=maxrad,status=0);
   list_tfresp <- list_radii <- list();
@@ -98,7 +100,14 @@ test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radi
     preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     lims <- preds_lims(preds,limit=maxrad);
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
-  }
+  };
+  for(pp in pnfit) {
+    ppdat <-ptsim_2lin(pol2crt(c(preds['radest',pp],phi))); 
+    pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
+    # for each pp (verdict-returning panel function) we generate a separate dataset therefore
+    # we need to iterate over all the summary-only non-verdict functions for each of these datasets
+    for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
+  };
   browser();
   # TODO: finalize report at those coords-- summary output for all panel functions
   # TODO: at final preds, generate one last dataset and run the panel on it, saving the full output this time to logenv
