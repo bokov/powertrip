@@ -82,19 +82,24 @@ test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radi
   cycle <- 1;
   lims <- c(min=0,max=maxrad,status=0);
   list_tfresp <- list_radii <- list();
+  tfoffset <- 0;
   while(lims['status']<1){
     list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']);
     for(ii in 1:nrads){
       iicoords <- c(list_radii[[cycle]][ii],phi);
       iidat <- ptsim_2lin(pol2crt(iicoords));
-      list_tfresp[[ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
-      if(any(is.na(list_tfresp[[ii]]))) list_radii[[cycle]][ii] <- NA;
+      list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
+      if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
     # then fit models on the panel verdicts (T/F), tfresp
+    testtf<-na.omit(data.frame(do.call(rbind,list_tfresp)));
+    testrd<-na.omit(unlist(list_radii));
+    if(length(testrd)!=nrow(testtf)) browser();
     preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     lims <- preds_lims(preds,limit=maxrad);
-    cycle <- cycle+1;
+    cycle <- cycle+1; tfoffset <- length(list_tfresp);
   }
-  # create radii within the latest version of lims
   browser();
+  # TODO: finalize report at those coords-- summary output for all panel functions
+  # TODO: save final phi and radiii
 }
