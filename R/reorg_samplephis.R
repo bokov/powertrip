@@ -68,6 +68,7 @@ test_harness <- function(#list_tfresp=testenv$test_tfresp,radii=testenv$test_rad
                          ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
                          ,nrads=20
                          ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)^2),summ=ptpnl_summary)
+                         ,ptsim=ptsim_nlin
                          ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
@@ -109,6 +110,13 @@ test_harness <- function(#list_tfresp=testenv$test_tfresp,radii=testenv$test_rad
     for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
   };
   browser();
-  # TODO: finalize report at those coords-- summary output for all panel functions
-  # TODO: at final preds, generate one last dataset and run the panel on it, saving the full output this time to logenv
+  # TODO: replace the ptsim_2lin() calls above with calls using a function specified in the argument
+  # TODO: try running end-to-end using ptsim_nlin() as the sim function
+  # TODO: finalize this function and create new test_harness() that calls this on a set of random phis
+  # TODO: add a phi -> radius prediction step (multivariate, whole parameter space)
+  # TODO: make the test harness loop
+  # TODO: run all the way through
+  # TODO: finalize outer function
+  # TODO: launch the linear model version
+  # TODO: try to resurrect simsurve and survwrapper
 }

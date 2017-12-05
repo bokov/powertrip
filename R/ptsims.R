@@ -31,6 +31,24 @@ ptsim_2lin <- function(coords,nn=100,refcoords=rep_len(0,length(coords)),...){
   return(rbind(ooc,oot));
 }
 
+ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refcoords=coords*0,...){
+  # we want an even number of coordinates so that half as many numeric variables can be generated
+  # to make this run faster presumably we should ahead of time specify externally coordnames, lcoord,
+  # and avoid odd coordinate lengths
+  #if(lcoords%%2) {lcoords<-lcoords+1; coords<-setNames(c(coords,0),coordnames<-c(coordnames,make.names(lcoords)))};
+  # notice that refcoords automagically are the right length regardless of whether or not the above if()
+  # statement is triggered-- I suspect this is due to lazy evaluation-- refcoords remain a call until 
+  # they are used in the following expression...
+  coords <- coords + refcoords;
+  xs <- matrix(rnorm(nn*lvars*2),nrow=nn*2,ncol=lvars);
+  out <- data.frame(group=rep(c('control','treated'),each=nn)
+                    ,xs
+                    ,yy=ifelse(seq_len(2*nn)<=nn,refcoords[1]+xs %*% refcoords[-1],coords[1]+xs %*%coords[-1])+rnorm(nn*2));
+}
+#' The following works!
+#' 
+#ptsim_nlin(pol2crt(c(1.06,5.124,2,-0.5))) -> foo;
+  
 #' TODO: in addition to a logenv object, return a character vector specifying a
 #' path through that logenv
 #' TODO: optional formula argument
@@ -140,7 +158,14 @@ ptpnl_lm <- new.ptpnl("lm"
                       , result = broom::glance(fit)
                       , eval. = p.adjust(with(summary(fit), coefficients[, "Pr(>|t|)"][rownames(coefficients) %in% 
                                                                                                 matchterm])) < psig
-                      , frm = yy ~ ., psig = 0.05, matchterm = c("grouptreated", "grouptreated:xnum"))
+                      , frm = yy ~ ., psig = 0.05, matchterm = c("grouptreated", "grouptreated:xnum"));
+#' The following work (after running the ptsim_nlin example near top of script):
+#' 
+#' Group alone:
+ptpnl_lm(foo,c(1.06,5.124,2,-0.5),matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
+#' With interactions:
+ptpnl_lm(foo,c(1.06,5.124,2,-0.5),frm=yy~(.)*group, matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
+
 #' there can be a list of these, and they can repeat
 #baz<-c(ptpnl_passthru,ptpnl_qntile,ptpnl_passthru);
 #' you can generate names for them automatically
