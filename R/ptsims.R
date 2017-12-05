@@ -179,3 +179,36 @@ ptpnl_2lin <- function(data,coords=NULL,termrxp='group',sig=0.05,...){
        ,call=sys.call(sys.parent())
        );
 }
+
+deepassign <- function(obj,path,val,append=T){
+  # assuming that obj is list-like and path is a path through nested named branches and val gets assigned at the terminal branch
+  # in other words, given a path into a hierarchical list-like object, and a value
+  # when this function is done running that node will exist and the value will be
+  # assigned to it. This has been tested on environments.
+  # The optional append argument means that by default, the val will be appended 
+  # as an anonymous sub-object to the terminal node of path preserving any previous
+  # value/s. If append is set to F, then val will create or replace the terminal
+  # node of the path. Unexpected things can happen if you create nodes with append=F
+  # and later populate them with append=T because you'll be appending to the existing
+  # value of the node rather than appending a new sub-node. Can't think of a clean
+  # way to detect and warn of this right now, so this comment is your warning!
+  if(length(path)<=1) parsepath='obj' else {
+    if(!path[1] %in% names(obj)) obj[[path[1]]] <- list();
+    parsepath <- paste0("obj[['",path[1],"']]");
+    for(ii in seq_along(path[-length(path)])[-1]) {
+      newparsepath <- paste0(parsepath,"[['",path[ii],"']]");
+      if(!path[ii] %in% names(eval(parse(text=parsepath)))) {
+        eval(parse(text=paste0(newparsepath,'<- list()')));
+      }
+      parsepath <- newparsepath;
+    }
+  }
+  # at this point we have an obj that should be capable of taking an 
+  # assignment to the final name of path regardless
+  finalpath <- paste0(parsepath,"[['",tail(path,1),"']]");
+  browser();
+  if(append){
+    lorig <- eval(parse(text=paste0('length(',finalpath,')')));
+    eval(parse(text=paste0(finalpath,"[[",lorig+1,"]]<-val")));
+  } else eval(parse(text=paste0(finalpath,"<-val")));
+}

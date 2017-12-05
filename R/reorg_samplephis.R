@@ -64,7 +64,7 @@ load('data/testdata.rda',envir = testenv);
 
 test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radii
                          ,phi=min(testenv$test_phis)
-                         ,philabel=paste0('phi_',paste0(round(phi,2),collapse='_'))
+                         ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
                          ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
                          ,nrads=20
                          ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)^2))
@@ -101,5 +101,5 @@ test_harness <- function(list_tfresp=testenv$test_tfresp,radii=testenv$test_radi
   }
   browser();
   # TODO: finalize report at those coords-- summary output for all panel functions
-  # TODO: save final phi and radiii
+  # TODO: at final preds, generate one last dataset and run the panel on it, saving the full output this time to logenv
 }
