@@ -71,8 +71,12 @@ phi_radius <- function(phi=c(2.3,5.12)
                          ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
+  
+  # for debugging
   phi_radius_env <- environment();
   on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
+  # end debugging 
+  
   # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
   # rather than just summary statistics)
   pneval <- sapply(pnlst,attr,'eval');
@@ -87,6 +91,7 @@ phi_radius <- function(phi=c(2.3,5.12)
   lims <- c(min=0,max=maxrad,status=0);
   list_tfresp <- list_radii <- list();
   tfoffset <- 0;
+  t0 <- Sys.time();
   while(lims['status']==0){
     list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']);
     for(ii in 1:nrads){
@@ -111,8 +116,10 @@ phi_radius <- function(phi=c(2.3,5.12)
     # TODO: implement logging at the phi level-- don't retain model results or 
     #       stats about the current simulated dataset, just the global part of 
     #       ptpnl_summary especially the phi
+    # TODO: implement error logging for ptpnl_ functions
+    # TODO: in normal result logging for ptpnl_ functions retain the verdict as well
     # TODO: consider not bothering with na.omit since glm probably does it
-    #       internally anyway. Makes it easier to find fraction NA too...
+    #       internally anyway. Makes it easier to find fraction NA too (above TODO)
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
   };
   if(lims['status']==1){
@@ -122,11 +129,14 @@ phi_radius <- function(phi=c(2.3,5.12)
       pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
       # for each pp (verdict-returning panel function) we generate a separate dataset therefore
       # we need to iterate over all the summary-only non-verdict functions for each of these datasets
-      for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
+      for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq),time=Sys.time()-t0);
     };
   } else cat('Failure: ');
   cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\n');
+  # TODO: add back in the dynamic script execution and the external exit directive
   # TODO: add a phi -> radius prediction step (multivariate, whole parameter space)
+  # TODO: for prioritizing phis, also model the runtime to get most uncertainty
+  #       per second of runtime or per simulation
   # TODO: run all the way through
   # TODO: finalize outer function
   # TODO: launch the linear model version
