@@ -137,6 +137,8 @@ phi_radius <- function(phi=c(2.3,5.12)
   # TODO: add a phi -> radius prediction step (multivariate, whole parameter space)
   # TODO: for prioritizing phis, also model the runtime to get most uncertainty
   #       per second of runtime or per simulation
+  # TODO: also, model the 'dead-zones' -- places where we had to give up --
+  #       and exclude them
   # TODO: run all the way through
   # TODO: finalize outer function
   # TODO: launch the linear model version
@@ -157,3 +159,4 @@ test_harness<-function(logenv=logenv,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
     phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)
     ,time=time,nsims=nsims,cycle=cycle)))));
 };
+# Timing stopped at: 6573 5411 6740 ... about 1.87 hours to try 1000 pairs of phis
