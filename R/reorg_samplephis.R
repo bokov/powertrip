@@ -62,16 +62,17 @@ radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
 testenv <- new.env();
 load('data/testdata.rda',envir = testenv);
 
-test_harness <- function(#list_tfresp=testenv$test_tfresp,radii=testenv$test_radii
-                         phi=min(testenv$test_phis)
+phi_radius <- function(phi=c(2.3,5.12)
                          ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
-                         ,maxs=c(2,4.5),mins=c(-3.1,-1.3)
+                         ,maxs=c(2,4.5,3),mins=c(-3.1,-1.3,-0.5)
                          ,nrads=20
-                         ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)^2),summ=ptpnl_summary)
+                         ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)*group),summ=ptpnl_summary)
                          ,ptsim=ptsim_nlin
                          ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
+  phi_radius_env <- environment();
+  on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
   # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
   # rather than just summary statistics)
   pneval <- sapply(pnlst,attr,'eval');
@@ -86,11 +87,11 @@ test_harness <- function(#list_tfresp=testenv$test_tfresp,radii=testenv$test_rad
   lims <- c(min=0,max=maxrad,status=0);
   list_tfresp <- list_radii <- list();
   tfoffset <- 0;
-  while(lims['status']<1){
+  while(lims['status']==0){
     list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']);
     for(ii in 1:nrads){
       iicoords <- c(list_radii[[cycle]][ii],phi);
-      iidat <- ptsim_2lin(pol2crt(iicoords));
+      iidat <- ptsim(pol2crt(iicoords));
       list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
       if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
@@ -98,25 +99,51 @@ test_harness <- function(#list_tfresp=testenv$test_tfresp,radii=testenv$test_rad
     testtf<-na.omit(data.frame(do.call(rbind,list_tfresp)));
     testrd<-na.omit(unlist(list_radii));
     if(length(testrd)!=nrow(testtf)) browser();
-    preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
+    preds <- sapply(testtf,resp_preds,radii=testrd);
+    #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     lims <- preds_lims(preds,limit=maxrad);
+    # Currently, we give up on this entire set of phis and exit from phi_radius()
+    # the first cycle when glm fails for all panel functions regardless of why.
+    # TODO: this doesn't go far enough-- find a way to detect > X% NAs in the 
+    #       verdicts and also disqualify. Perhaps within the panel function
+    # TODO: this may run too long-- set a cycle-limit exceeding which would also 
+    #       end the attempt to estimate the radius for these phis
+    # TODO: implement logging at the phi level-- don't retain model results or 
+    #       stats about the current simulated dataset, just the global part of 
+    #       ptpnl_summary especially the phi
+    # TODO: consider not bothering with na.omit since glm probably does it
+    #       internally anyway. Makes it easier to find fraction NA too...
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
   };
-  for(pp in pnfit) {
-    ppdat <-ptsim_2lin(pol2crt(c(preds['radest',pp],phi))); 
-    pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
-    # for each pp (verdict-returning panel function) we generate a separate dataset therefore
-    # we need to iterate over all the summary-only non-verdict functions for each of these datasets
-    for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
-  };
-  browser();
-  # TODO: replace the ptsim_2lin() calls above with calls using a function specified in the argument
-  # TODO: try running end-to-end using ptsim_nlin() as the sim function
-  # TODO: finalize this function and create new test_harness() that calls this on a set of random phis
+  cat(cycle,'|');
+  if(lims['status']==1){
+    cat('Success: ');
+    for(pp in pnfit) {
+      ppdat <-ptsim(pol2crt(c(preds['radest',pp],phi))); 
+      pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
+      # for each pp (verdict-returning panel function) we generate a separate dataset therefore
+      # we need to iterate over all the summary-only non-verdict functions for each of these datasets
+      for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
+    };
+  } else cat('Failure: ');
+  cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\n');
   # TODO: add a phi -> radius prediction step (multivariate, whole parameter space)
-  # TODO: make the test harness loop
   # TODO: run all the way through
   # TODO: finalize outer function
   # TODO: launch the linear model version
   # TODO: try to resurrect simsurve and survwrapper
 }
+
+test_harness<-function(logenv=logenv,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
+                       ,npoints=50,nphi=2,nrads=20
+                       ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group),summ=ptpnl_summary)
+                       ,ptsim=ptsim_nlin,...){
+  phis <- matrix(runif(npoints*nphi,0,2*pi),nrow=npoints,ncol=nphi);
+  for(ii in 1:npoints){
+    phi_radius(phi=phis[ii,],maxs=maxs,mins=mins,nrads=nrads,pnlist=pnlist,ptsim=ptsim);
+  }
+  browser();
+  data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
+    phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)
+    ,time=time,nsims=nsims,cycle=cycle)))));
+};
