@@ -115,7 +115,6 @@ phi_radius <- function(phi=c(2.3,5.12)
     #       internally anyway. Makes it easier to find fraction NA too...
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
   };
-  cat(cycle,'|');
   if(lims['status']==1){
     cat('Success: ');
     for(pp in pnfit) {
@@ -140,6 +139,7 @@ test_harness<-function(logenv=logenv,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
                        ,ptsim=ptsim_nlin,...){
   phis <- matrix(runif(npoints*nphi,0,2*pi),nrow=npoints,ncol=nphi);
   for(ii in 1:npoints){
+    cat(ii,'\t|');
     phi_radius(phi=phis[ii,],maxs=maxs,mins=mins,nrads=nrads,pnlist=pnlist,ptsim=ptsim);
   }
   browser();
