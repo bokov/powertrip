@@ -64,11 +64,20 @@ load('data/testdata.rda',envir = testenv);
 
 phi_radius <- function(phi=c(2.3,5.12)
                          ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
+                         ,logenv=logenv
                          ,maxs=c(2,4.5,3),mins=c(-3.1,-1.3,-0.5)
                          ,nrads=20
                          ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)*group),summ=ptpnl_summary)
                          ,ptsim=ptsim_nlin
-                         ,...){
+                         ,wd=paste0(getwd(),'/')
+                         # when a file having the name specified by this variable is found, 
+                         # the dataenv,logenv, and errenv objects are saved
+                         ,savetrigger=paste0(wd,'pt_savedata')
+                         # name of file to which to save when savetrigger encountered
+                         ,savefile=paste0(wd,'pt_result.rdata')
+                         # name of file that will be sourced (once and then moved) if found
+                         ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
+                       ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
   
@@ -121,6 +130,14 @@ phi_radius <- function(phi=c(2.3,5.12)
     # TODO: consider not bothering with na.omit since glm probably does it
     #       internally anyway. Makes it easier to find fraction NA too (above TODO)
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
+    if(file.exists(savetrigger)) {
+      save(phi_radius_env,logenv,file=savefile);
+      file.remove(savetrigger);
+    }
+    if(file.exists(sourcepatch)) {
+      source(sourcepatch,local = T);
+      file.rename(sourcepatch,paste0(sourcepatch,'.bak'));
+    }
   };
   if(lims['status']==1){
     cat('Success: ');
@@ -133,13 +150,14 @@ phi_radius <- function(phi=c(2.3,5.12)
     };
   } else cat('Failure: ');
   cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\n');
-  # TODO: add back in the dynamic script execution and the external exit directive
+  # DONE: add back in the dynamic script execution and the external exit directive
   # TODO: add a phi -> radius prediction step (multivariate, whole parameter space)
   # TODO: for prioritizing phis, also model the runtime to get most uncertainty
   #       per second of runtime or per simulation
   # TODO: also, model the 'dead-zones' -- places where we had to give up --
   #       and exclude them
-  # TODO: run all the way through
+  # TODO: figure out why negative radii are being allowed and fix
+  # TODO: figure out why plots look so wierd... is pol2crt wrong?
   # TODO: finalize outer function
   # TODO: launch the linear model version
   # TODO: try to resurrect simsurve and survwrapper
@@ -149,10 +167,10 @@ test_harness<-function(logenv=logenv,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
                        ,npoints=50,nphi=2,nrads=20
                        ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group),summ=ptpnl_summary)
                        ,ptsim=ptsim_nlin,...){
-  phis <- matrix(runif(npoints*nphi,0,2*pi),nrow=npoints,ncol=nphi);
+  phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
   for(ii in 1:npoints){
     cat(ii,'\t|');
-    phi_radius(phi=phis[ii,],maxs=maxs,mins=mins,nrads=nrads,pnlist=pnlist,ptsim=ptsim);
+    phi_radius(phi=phis[ii,],logenv=logenv,maxs=maxs,mins=mins,nrads=nrads,pnlist=pnlist,ptsim=ptsim);
   }
   browser();
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(

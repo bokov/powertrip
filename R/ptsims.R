@@ -162,9 +162,9 @@ ptpnl_lm <- new.ptpnl("lm"
 #' The following work (after running the ptsim_nlin example near top of script):
 #' 
 #' Group alone:
-ptpnl_lm(foo,c(1.06,5.124,2,-0.5),matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
+#ptpnl_lm(foo,c(1.06,5.124,2,-0.5),matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
 #' With interactions:
-ptpnl_lm(foo,c(1.06,5.124,2,-0.5),frm=yy~(.)*group, matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
+#ptpnl_lm(foo,c(1.06,5.124,2,-0.5),frm=yy~(.)*group, matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
 
 #' there can be a list of these, and they can repeat
 #baz<-c(ptpnl_passthru,ptpnl_qntile,ptpnl_passthru);
