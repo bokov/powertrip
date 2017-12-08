@@ -43,7 +43,7 @@ ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refc
   xs <- matrix(rnorm(nn*lvars*2),nrow=nn*2,ncol=lvars);
   out <- data.frame(group=rep(c('control','treated'),each=nn)
                     ,xs
-                    ,yy=ifelse(seq_len(2*nn)<=nn,refcoords[1]+xs %*% refcoords[-1],coords[1]+xs %*%coords[-1])+rnorm(nn*2));
+                    ,yy=ifelse(seq_len(2*nn)<=nn,refcoords[1]+xs %*% refcoords[-1],coords[1]+xs %*%coords[-1])+rnorm(2*nn));
 }
 #' The following works!
 #' 
@@ -141,7 +141,7 @@ ptpnl_summary <- new.ptpnl('summ'
                            #,nsims.=quote(length(list_tfresp))
                            #,phi.=quote(phi)
                            ,time=quote(Sys.time())
-                           ,literals=c('coords','cycle','phi','preds')
+                           ,literals=c('coords','cycle','phi','preds','lims','maxrad')
                            #,philabel_= quote(callingframe$philabel)
                            #,preds.=quote(preds)
                            #,philabel_=quote(philabel)
@@ -153,12 +153,24 @@ ptpnl_summary <- new.ptpnl('summ'
                            #,index=substitute(c('coords',`philabel_`,'summ')));
 );
 
+ptpnl_wx <- new.ptpnl("wx"
+                      , fit = wilcox.test(frm, data)
+                      , result = broom::glance(fit)
+                      , eval. = fit$p.value < psig
+                      , frm = yy ~ group, psig = 0.05);
+
+ptpnl_tt <- new.ptpnl("tt"
+                      , fit = t.test(frm, data)
+                      , result = broom::glance(fit)
+                      , eval. = fit$p.value < psig
+                      , frm = yy ~ group, psig = 0.05);
+
 ptpnl_lm <- new.ptpnl("lm"
                       , fit = lm(formula = frm, data)
                       , result = broom::glance(fit)
                       , eval. = p.adjust(with(summary(fit), coefficients[, "Pr(>|t|)"][rownames(coefficients) %in% 
                                                                                                 matchterm])) < psig
-                      , frm = yy ~ ., psig = 0.05, matchterm = c("grouptreated", "grouptreated:xnum"));
+                      , frm = yy ~ ., psig = 0.05, matchterm = substitute(paste0('grouptreated',c('',paste0(':',names(data))))));
 #' The following work (after running the ptsim_nlin example near top of script):
 #' 
 #' Group alone:

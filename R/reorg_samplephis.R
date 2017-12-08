@@ -4,7 +4,181 @@
 #' self-explanatory objects currently exist:
 #' `test_iisims`,`test_phis`,`test_pnlst`,`test_radii`,`test_tfresp`
 #' 
+#' # Helper functions
+#' 
+#' Lazy way to trigger a debug or save event in another session that's running
+#' the main powertrip 
+ptmg <- function(action=c('save','debug')
+                 ,wd=paste0(getwd(),'/')
+                 ,savetrigger=paste0(wd,'pt_savedata')
+                 ,debugtrigger=paste0(wd,'pt_debug')){
+  action <- match.arg(action,several.ok = T);
+  if('save' %in% action) file.create(savetrigger);
+  if('debug' %in% action) file.create(debugtrigger);
+}
+
+#' Shortcut for loading a saved powertrip environment
+load.ptenv <- function(file='pt_result.rdata',env=new.env(),logenvonly=T,savewait=0.5,...) {
+  if(savewait>0) ptmg(action='save',...);
+  Sys.sleep(savewait);
+  load(file,envir = env); class(env)<-c('ptenv',class(env)); 
+  if(logenvonly) env$logenv else env;
+}
+
+#' Extract from a pt-derived dataframe a cartesian one with the selected 
+#' columns as radius and phis
+dfcrt <- function(data,radius,phis=c('phi.Var1','phi.Var2'),subset=T){
+  data.frame(pol2crt(subset(data,subset=subset)[,c(radius,phis)]));
+};
+
+#' Set up lm fits and predictions in logenv to subsequently update
+#' Note: this function intentionally blows away anything already in
+#' logenv[[pathtop]] that may have the same name. For updates, use
+#' env_fitupdt()
+#
+
+env_fitinit <- function(logenv
+                        ,fields=alist(rad=ifelse(preds['conv',]==1,preds['radest',],NA)
+                                      ,phi=phi
+                                      #,convs=sum(preds['conv',])
+                                      ,nsims=nsims)
+                        #,pathtop='fits'
+                        ,...){
+  if(length(intersect(c('rad','phi','nsims'),names(fields)))<3){
+    stop("The fields argument must be an alist that includes 'rad','phi',and 'nsims' among its elements, see 'args(env_fitinit)'");
+  };
+  logenv$fits$fields <- fields;
+  #if(!pathtop %in% names(logenv)) logenv[[pathtop]] <- list();
+  # hardcoding pathtop in hopes of making functions less brittle
+  if(!'fits' %in% names(logenv)) logenv$fits <- list();
+  # obtain the updated data we will need
+  logenv$fits$radsphis <- pt2df(ptenv=logenv,fields=fields,...);
+  # here is why we needed rads, phis, and nsims...
+  with(logenv$fits,{
+    logenv$fits$radnames <- radnames <- grep('^rad\\.',names(radsphis),val=T);
+    logenv$fits$phinames <- phinames <- grep('^phi\\.',names(radsphis),val=T);
+    # formula for modeling number of simulations needed to converge as a function 
+    # of angle. This will get updated to create all the formulas for predicting
+    # the radii for the respective ptpnl_ functions
+    nsimsfrm<-update(as.formula(paste('nsims~('
+                                      ,paste0(sprintf('%1$s+cos(%1$s)+sin(%1$s)',phinames)
+                                              ,collapse='+'),')^2')),.~.);
+    logenv$fits$frms <- frms <- c(nsims=nsimsfrm
+                                ,sapply(radnames
+                                        ,function(xx) update(nsimsfrm
+                                                             ,as.formula(paste0(xx,'~.')))));
+  logenv$fits$models <- sapply(frms,function(xx) {
+      oo<-lm(formula=xx,logenv$fits$radsphis); oo$call$formula <- xx; oo;
+      },simplify=F);
+  });
+};
+
+#' To run each time a new set of phis has been completed
+env_fitupdt <- function(logenv,...){
+  logenv$fits$radsphis <- pt2df(ptenv = logenv,fields=logenv$fits$fields,...);
+  logenv$fits$models <- sapply(logenv$fits$models,update,data=logenv$fits$radsphis);
+};
+
+#' To get predictions
+env_fitpred <- function(logenv,newdata
+                        # someday you'll forget what the hell was the structure
+                        # of your input data for this particular run and when you
+                        # do, set example=T and run, with logenv as the only other
+                        # required argument
+                        ,example=F
+                        ,maxrad=NULL
+                        ,...){
+  if(example) return(summary(logenv$fits$radsphis[,logenv$fits$phinames]));
+  if(missing(newdata)) newdata <- logenv$fits$radsphis[,logenv$fits$phinames];
+  oo<-do.call(data.frame,sapply(logenv$fits$models
+                            ,function(xx) with(predict(xx,newdata=newdata,se=T)
+                                               ,cbind(fit=fit,se=se.fit)),simplify=F));
+  if(!is.null(maxrad)){
+    fnames<-paste0(logenv$fits$radnames,'.fit');
+    snames<-paste0(logenv$fits$radnames,'.se');
+    ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrads);
+    oo[fnames][ex] <- NA;
+    oo[snames][ex] <- NA;
+  }
+  oo;
+};
+
+env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
+                      ,radsphis = 'radsphis'
+                      ,fitslist = c('fields','frms','models','phinames','radnames')
+                      ,...){
+  if(!coords %in% names(logenv) ||
+     length(logenv[[coords]]) <= 1 ||
+     (ndata <- sum(sapply(logenv[[coords]],function(xx) summ %in% names(xx)))) <= 1
+     ) return('needsdata') else {
+       if(length(fnames<-names(logenv[[fits]]))==0 || 
+          length(setdiff(fnames,c(fitslist,radsphis)))>0 ||
+          is.null(rprows <- nrow(logenv[[fits]][[radsphis]]))
+          ) return('needsinit') else {
+            if(rprows != ndata) return('needsupdate') else {
+              return('uptodate');
+            }
+          }
+     }
+}
+
+#' Only the first argument is required if logenv is not initialized
+#' 
+make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfrac=0.5,numses=2,fresh=F,...){
+  # if no data obtained yet or fresh manually set to T then phiprefix and nphis
+  # are required arguments' logenv and npoints are always required
+  # so are maxs and mins until/unless they get saved in logenv as well...
+  # bestfrac is the quantile (of the filtering criterion) above which to keep 
+  # the candidate phis... in order to target the most informative and least
+  # computationally expensive parts of the current parameter space
+  switch(env_state(logenv,...)
+         ,needsdata={fresh<-T}
+         ,needsinit={env_fitinit(logenv)}
+         ,needsupdate={env_fitupdt(logenv)});
+  if(!fresh) {
+    phinames<-logenv$fits$phinames;
+    nphis<-length(phinames);
+  } else {
+    phinames <- paste0(phiprefix,seq_len(nphis));
+  }
+  oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(nphis));
+  colnames(oo) <- paste0(phiprefix,seq_len(nphis));
+  maxrad<-apply(phis,1,pollim,maxs=maxs,mins=mins); 
+  if(!fresh){
+    fp <- env_fitpred(logenv,newdata = oo,maxrad = maxrad);
+    snames <- paste0(logenv$fits$radnames,'.se');
+    fnames <- paste0(logenv$fits$radnames,'.fit');
+    if(bestfrac<1){
+      filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T)/fp$nsims.fit;
+      filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
+      oo <- oo[filterkeep,];
+      maxrad <- maxrad[filterkeep];
+      fp <- fp[filterkeep,];
+    }
+    oo$mins <- pmax(apply(fp[fnames]-numses*fp[snames],1,min,na.rm=T),0);
+    oo$maxs <- pmin(apply(fp[fnames]+numses*fp[snames],1,max,na.rm=T),maxrad);
+  } else {oo$mins <- 0; oo$maxs <- maxrad};
+  cbind(oo,maxrad);
+}
+
+#' Any arguments in ... are treated as expressions to evaluate in the context of
+#' ptenv$coords[[XXX]][[summname]]
+pt2df <- function(ptenv,summname='summ'
+                  ,fields=alist(rad=preds['radest',],phi=phi,conv=preds['conv',],nsims=nsims,time=time,maxrad=maxrad,lims=lims)
+                  ,...){
+  dots <- as.list(substitute(list(...))[-1]);
+  # to the default fields below add in maxrad=maxrad next time logenv is rebuilt
+  fields <- c(fields,dots);
+  oo<-data.frame(t(sapply(ptenv$coords,function(xx) with(xx[[summname]][[1]],do.call('c',fields)))));
+  cat('Read',nrow(oo),'rows,',ncol(oo),'columns.\n');
+  oo;
+}
+
+
+#' # Core functions
+#' 
 resp_preds <- function(tfresp,radii,glmfit,saveglm=F,power=0.8){
+  # think about what to do when this function fails
   if(missing(glmfit)) {glmfit <- glm(tfresp~radii,family='binomial') } else {
     glmfit <- update(glmfit) };
   out <- MASS::dose.p(glmfit,p=power);
@@ -33,15 +207,16 @@ preds_lims <- function(preds,tolse=1,tol=0.01,limit=Inf,radci=2,...){
   #     sepred*setol > tol  | min < 0 | max > limits
   notdone <- preds['respse',]*tolse > tol;
   # if all panels failed, catch failure and signal accordingly
-  if(!any(notfailed)) return(c(min=NA,max=NA,status=-1)); #TODO: log failure
+  if(!any(notfailed)) return(c(min=NA,max=NA,status=-1,notfailed=notfailed,notdone=notdone)); #TODO: log failure
   # if all non-failed panels converged, return final estimates with failed ones flagged
   # if there are any non-failed non-converged panels
   # returns a single max and min for the next round of radii based on those
+  pnstatus <- 
   if(status<-!any(select <- notfailed & notdone)) select <- notfailed;
   return(c(
      min=max(min(preds['radest',select] - preds['radse',select]*radci),0)
     ,max=min(max(preds['radest',select] + preds['radse',select]*radci),limit)
-    ,status=status));
+    ,status=status,notfailed=notfailed,notdone=notdone));
 }
 
 #' Not needed, one liner: runif(nn,lims[1],lims[2]);
@@ -62,21 +237,23 @@ radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
 testenv <- new.env();
 load('data/testdata.rda',envir = testenv);
 
-phi_radius <- function(phi=c(2.3,5.12)
-                         ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
-                         ,logenv=logenv
-                         ,maxs=c(2,4.5,3),mins=c(-3.1,-1.3,-0.5)
-                         ,nrads=20
-                         ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname="lm2",frm=yy~(.)*group),summ=ptpnl_summary)
-                         ,ptsim=ptsim_nlin
-                         ,wd=paste0(getwd(),'/')
-                         # when a file having the name specified by this variable is found, 
-                         # the dataenv,logenv, and errenv objects are saved
-                         ,savetrigger=paste0(wd,'pt_savedata')
-                         # name of file to which to save when savetrigger encountered
-                         ,savefile=paste0(wd,'pt_result.rdata')
-                         # name of file that will be sourced (once and then moved) if found
-                         ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
+phi_radius <- function(phi,maxrad,pnlst
+                       ,pneval=sapply(pnlst,attr,'eval')
+                       ,pnfit=names(pneval)[pneval]
+                       ,pninfo=names(pneval)[!pneval]
+                       ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
+                       ,logenv=logenv,nrads=20
+                       ,maxs=c(2,4.5,3),mins=c(-3.1,-1.3,-0.5)
+                       ,ptsim=ptsim_nlin
+                       ,wd=paste0(getwd(),'/')
+                       # when a file having the name specified by this variable is found, 
+                       # the dataenv,logenv, and errenv objects are saved
+                       ,savetrigger=paste0(wd,'pt_savedata')
+                       ,debugtrigger=paste0(wd,'pt_debug')
+                       # name of file to which to save when savetrigger encountered
+                       ,savefile=paste0(wd,'pt_result.rdata')
+                       # name of file that will be sourced (once and then moved) if found
+                       ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
                        ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
@@ -85,15 +262,12 @@ phi_radius <- function(phi=c(2.3,5.12)
   phi_radius_env <- environment();
   on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
   # end debugging 
-  
+
   # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
   # rather than just summary statistics)
-  pneval <- sapply(pnlst,attr,'eval');
-  pnfit <- names(pneval)[pneval];
-  pninfo <- names(pneval)[!pneval];
   # obtain the maximum allowed radius for the current phis
   # (derived from the cartesian limits maxs and mins)
-  maxrad<-pollim(phi,maxs=maxs,mins=mins);
+  if(missing(maxrad)) maxrad<-pollim(phi,maxs=maxs,mins=mins);
   # lenght of current verdicts
   #nntf <- length(list_tfresp);
   cycle <- 1;
@@ -110,12 +284,14 @@ phi_radius <- function(phi=c(2.3,5.12)
       if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
     # then fit models on the panel verdicts (T/F), tfresp
+    # na.omits might be unnecessary
     testtf<-na.omit(data.frame(do.call(rbind,list_tfresp)));
     testrd<-na.omit(unlist(list_radii));
-    if(length(testrd)!=nrow(testtf)) browser();
+    #if(length(testrd)!=nrow(testtf)) browser();
     preds <- sapply(testtf,resp_preds,radii=testrd);
     #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     lims <- preds_lims(preds,limit=maxrad);
+    if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
     # Currently, we give up on this entire set of phis and exit from phi_radius()
     # the first cycle when glm fails for all panel functions regardless of why.
     # TODO: this doesn't go far enough-- find a way to detect > X% NAs in the 
@@ -134,6 +310,9 @@ phi_radius <- function(phi=c(2.3,5.12)
       save(phi_radius_env,logenv,file=savefile);
       file.remove(savetrigger);
     }
+    if(file.exists(debugtrigger)){
+      browser();
+    }
     if(file.exists(sourcepatch)) {
       source(sourcepatch,local = T);
       file.rename(sourcepatch,paste0(sourcepatch,'.bak'));
@@ -149,30 +328,54 @@ phi_radius <- function(phi=c(2.3,5.12)
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq),time=Sys.time()-t0);
     };
   } else cat('Failure: ');
-  cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\n');
+  cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
-  # TODO: add a phi -> radius prediction step (multivariate, whole parameter space)
-  # TODO: for prioritizing phis, also model the runtime to get most uncertainty
+  # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
+  # DONE: for prioritizing phis, also model the runtime to get most uncertainty
   #       per second of runtime or per simulation
   # TODO: also, model the 'dead-zones' -- places where we had to give up --
   #       and exclude them
-  # TODO: figure out why negative radii are being allowed and fix
-  # TODO: figure out why plots look so wierd... is pol2crt wrong?
+  # DONE?: figure out why negative radii are being allowed and fix
+  # DONE?: figure out why plots look so wierd... is pol2crt wrong?
   # TODO: finalize outer function
   # TODO: launch the linear model version
   # TODO: try to resurrect simsurve and survwrapper
 }
 
-test_harness<-function(logenv=logenv,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
+test_harness<-function(logenv=logenv
+                       #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
+                       ,maxs=c(20,20,20),mins=c(-20,-20,-20)
                        ,npoints=50,nphi=2,nrads=20
-                       ,pnlst=list(lm=ptpnl_lm,lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group),summ=ptpnl_summary)
+                       ,pnlst=list(lm=ptpnl_lm
+                                   ,lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group)
+                                   ,tt=ptpnl_tt
+                                   ,wx=ptpnl_wx
+                                   ,summ=ptpnl_summary)
                        ,ptsim=ptsim_nlin,...){
-  phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
+  #phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
+  # trying more regularly spaced phis, to get a handle on the weird output
+  # 10 intervals per phi results in 10,000 distinct points
+  phiseq <- sample(seq(0,pi,length.out=npoints),npoints,rep=F);
+  #browser();
+  phis <- as.matrix(do.call(expand.grid,c(replicate(nphi-1,phiseq,simplify=F),list(sample(seq(0,2*pi,length.out = npoints),npoints,rep=F)))));
+  logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
+  npoints <- nrow(phis);
+  pneval_ <- sapply(pnlst,attr,'eval');
+  pnfit <- names(pneval_)[pneval_];
+  pninfo <- names(pneval_)[!pneval_];
+  wd <- paste0(getwd(),'/');
   for(ii in 1:npoints){
     cat(ii,'\t|');
-    phi_radius(phi=phis[ii,],logenv=logenv,maxs=maxs,mins=mins,nrads=nrads,pnlist=pnlist,ptsim=ptsim);
+    phi_radius(phi=phis[ii,],maxrad=maxrads[ii],pnlst=pnlst
+               ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
+               ,logenv=logenv,maxs=maxs,mins=mins,nrads=nrads
+               ,ptsim=ptsim
+               ,wd=wd
+               ,savetrigger=paste0(wd,'pt_savedata')
+               ,debugtrigger=paste0(wd,'pt_debug')
+               ,savefile=paste0(wd,'pt_result.rdata')
+               ,sourcepatch=paste0(wd,'pt_sourcepatch.R'));
   }
-  browser();
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
     phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)
     ,time=time,nsims=nsims,cycle=cycle)))));
