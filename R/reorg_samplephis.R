@@ -76,7 +76,7 @@ env_fitinit <- function(logenv
 #' To run each time a new set of phis has been completed
 env_fitupdt <- function(logenv,...){
   logenv$fits$radsphis <- pt2df(ptenv = logenv,fields=logenv$fits$fields,...);
-  logenv$fits$models <- sapply(logenv$fits$models,update,data=logenv$fits$radsphis);
+  logenv$fits$models <- sapply(logenv$fits$models,update,data=logenv$fits$radsphis,simplify=F);
 };
 
 #' To get predictions
@@ -99,6 +99,8 @@ env_fitpred <- function(logenv,newdata
     ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrad);
     oo[fnames][ex] <- NA;
     oo[snames][ex] <- NA;
+    # apparently especially with small samples you can get negative nsims!
+    oo$nsims.fit[oo$nsims.fit<0] <- NA;
   }
   oo;
 };
@@ -108,7 +110,9 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
                       ,fitslist = c('fields','frms','models','phinames','radnames')
                       ,...){
   if(!coords %in% names(logenv) ||
-     length(logenv[[coords]]) <= 1 ||
+     # below 30 results we get wierd lm behavior given the number of interaction
+     # terms we have. The absolute hard limit is 20!
+     length(logenv[[coords]]) <= 30 ||
      (ndata <- sum(sapply(logenv[[coords]],function(xx) summ %in% names(xx)))) <= 1
      ) return('needsdata') else {
        if(length(fnames<-names(logenv[[fits]]))==0 || 
@@ -132,6 +136,9 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
 #' the number of radii (to 50) and decreasing the bounding box (from 20's to 2's
 #' with one 0.5) increases the chances that the first set of radii will give 
 #' enough of a starting result for glm to work with.
+#' 
+#' Definitely looks like setting limits such that they actually get encountered
+#' causes a lot of failures
 make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.5,numse=2,fresh=F,...){
   # Note: do not change phi prefix without also changing the fields argument of
   # pt2df() or the generation of subsequent rounds of phis will break
@@ -161,12 +168,21 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.
     if(bestfrac<1){
       filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T)/fp$nsims.fit;
       filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
+      # in env_fitpred() we turn illegal nsims.fit values (<0) into NAs so need
+      # to not make that break the filtering...
+      filterkeep <- filterkeep & !is.na(filterkeep);
+      if((addback<-bestfrac*npoints-sum(filterkeep))>0) filterkeep[!filterkeep][seq_len(addback)]<-T;
       oo <- oo[filterkeep,];
       maxrad <- maxrad[filterkeep];
       fp <- fp[filterkeep,];
     }
+    # because of the addback hack above, we now have phis with NA-only radius
+    # predictions getting added back in. That's okay, if they are NA they are 
+    # meaningless anyway, so replacing NAs with 0s or maxrad values
     oo$mins <- pmax(apply(fp[fnames]-numse*fp[snames],1,min,na.rm=T),0);
+    oo$mins[is.infinite(oo$mins)]<-0;
     oo$maxs <- pmin(apply(fp[fnames]+numse*fp[snames],1,max,na.rm=T),maxrad);
+    oo$maxs[is.infinite(oo$maxs)]<-maxrad[is.infinite(oo$maxs)];
   } else {oo$mins <- 0; oo$maxs <- maxrad};
   cbind(oo,maxrad);
 }
@@ -413,7 +429,7 @@ test_harness<-function(logenv=logenv
     #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
     actualpoints <- nrow(phis);
     for(ii in seq_len(actualpoints)){
-      cat(ii,'\t|');
+      cat(phicycle,'\t',ii,'\t');
       phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
                  ,pnlph=ptpnl_phisumm
                  ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo

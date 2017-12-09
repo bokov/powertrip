@@ -93,7 +93,7 @@ new.ptpnl <- function(fname,fit,result,eval.,...){
   formals(oo)$philabel <- substitute(c(callingframe$philabel,'unknown')[1]);
   formals(oo)$index <- substitute(c('coords',philabel,fname));
   for(ii in names(dots)) formals(oo)[[ii]] <- dots[[ii]];
-  if(!'frm' %in% names(formals(oo))) warning(
+  if(!'frm' %in% names(formals(oo))&&!missing(eval.)) warning(
    "  You did not specify the optional argument 'frm' when calling the new.ptpnl()
     function. This is allowed, but if your fit argument relies on a formula it's
     better to use frm instead of an explicit formula ( e.g. lm(frm,data) ) and 
@@ -192,6 +192,33 @@ ptpnl_lm <- new.ptpnl("lm"
                       , eval. = p.adjust(with(summary(fit), coefficients[, "Pr(>|t|)"][rownames(coefficients) %in% 
                                                                                                 matchterm])) < psig
                       , frm = yy ~ ., psig = 0.05, matchterm = substitute(paste0('grouptreated',c('',paste0(':',names(data))))));
+
+#' survreg, i.e. Weibull accelerated failure time
+ptpnl_sr <- new.ptpnl('sr'
+                      ,fit=survreg(formula=frm,data)
+                      ,result = broom::glance(fit)
+                      ,eval= summary(fit)$table[matchterm,'p']<psig
+                      # should also be able to handle Surv(yy,cc)~.
+                      ,frm=Surv(yy)~.,psig=0.05
+                      ,matchterm='grouptreated');
+
+ptpnl_sr <- new.ptpnl('sr'
+                      ,fit=survreg(formula=frm,data)
+                      ,result = broom::glance(fit)
+                      ,eval= summary(fit)$table[matchterm,'p']<psig
+                      # should also be able to handle Surv(yy,cc)~.
+                      ,frm=Surv(yy)~group,psig=0.05
+                      ,matchterm='grouptreated');
+
+ptpnl_cx <- new.ptpnl('cx'
+                      ,fit=coxph(formula=frm,data)
+                      ,result = broom::glance(fit)
+                      ,eval= summary(fit)$coef[matchterm,'Pr(>|z|)']<psig
+                      # should also be able to handle Surv(yy,cc)~.
+                      ,frm=Surv(yy)~group,psig=0.05
+                      ,matchterm='grouptreated');
+
+#' coxph
 #' The following work (after running the ptsim_nlin example near top of script):
 #' 
 #' Group alone:
