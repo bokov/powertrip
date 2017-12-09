@@ -39,7 +39,7 @@ dfcrt <- function(data,radius,phis=c('phi.Var1','phi.Var2'),subset=T){
 
 env_fitinit <- function(logenv
                         ,fields=alist(rad=ifelse(preds['conv',]==1,preds['radest',],NA)
-                                      ,phi=phi
+                                      ,phi=unname(phi)
                                       #,convs=sum(preds['conv',])
                                       ,nsims=nsims)
                         #,pathtop='fits'
@@ -56,7 +56,7 @@ env_fitinit <- function(logenv
   # here is why we needed rads, phis, and nsims...
   with(logenv$fits,{
     logenv$fits$radnames <- radnames <- grep('^rad\\.',names(radsphis),val=T);
-    logenv$fits$phinames <- phinames <- grep('^phi\\.',names(radsphis),val=T);
+    logenv$fits$phinames <- phinames <- grep("^phi[0-9]+$",names(logenv$fits$radsphis),val=T);
     # formula for modeling number of simulations needed to converge as a function 
     # of angle. This will get updated to create all the formulas for predicting
     # the radii for the respective ptpnl_ functions
@@ -122,8 +122,16 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
      }
 }
 
-#' Only the first argument is required if logenv is not initialized
+#' nphis is only required if logenv has no data yet
+#' logenv, npoints, maxs, mins are always required
 #' 
+#' Why did successful convergence rate go up so dramatically after implementing 
+#' this? Possibly because we have pre-empted some bug in the old limit 
+#' initialization that was being done inside phi_radius() and now we are
+#' properly enforcing valid radii limits. But it may also be that increasing 
+#' the number of radii (to 50) and decreasing the bounding box (from 20's to 2's
+#' with one 0.5) increases the chances that the first set of radii will give 
+#' enough of a starting result for glm to work with.
 make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.5,numse=2,fresh=F,...){
   # Note: do not change phi prefix without also changing the fields argument of
   # pt2df() or the generation of subsequent rounds of phis will break

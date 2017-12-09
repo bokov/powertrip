@@ -134,7 +134,26 @@ ptpnl_qntile <- new.ptpnl("qntile"
                           , fit = quantile(data[, 1], c(0.05, 0.1, 0.5, 0.9, 0.95))
                           , result = list(summary = fit, coords = coords, call = match.call(expand.dots = T)));
 
+# TODO: ptpnl_popsummary, ptpnl_phisummary
 
+ptpnl_simsumm <- new.ptpnl('simsm'
+                              ,fit = split(data.frame(data),data.frame(data)[,1])
+                              ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
+                                          ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
+                                          ,nsims=length(callingframe$list_tfresp)
+                                          ,time=time));
+                              
+ptpnl_phisumm <- new.ptpnl('phism'
+                           #,fit = split(data.frame(data),data.frame(data)[,1])
+                           ,time=quote(Sys.time())
+                           ,literals=c('coords','cycle','phi','preds','lims','maxrad','phicycle')
+                           ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
+                                       ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
+                                       ,nsims=length(callingframe$list_tfresp)
+                                       ,time=time)
+);
+#' NOTE: avoid creating variables that match the regexp "^phi[0-9]$" because 
+#' env_fitinit() will mistake them for phinames
 ptpnl_summary <- new.ptpnl('summ'
                            ,fit = split(data.frame(data),data.frame(data)[,1])
                            #,cycles.=quote(cycle)
