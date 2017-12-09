@@ -124,7 +124,7 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
 
 #' Only the first argument is required if logenv is not initialized
 #' 
-make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfrac=0.5,numses=2,fresh=F,...){
+make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfrac=0.5,numse=2,fresh=F,...){
   # if no data obtained yet or fresh manually set to T then phiprefix and nphis
   # are required arguments' logenv and npoints are always required
   # so are maxs and mins until/unless they get saved in logenv as well...
@@ -143,7 +143,7 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfra
   }
   oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(nphis));
   colnames(oo) <- paste0(phiprefix,seq_len(nphis));
-  maxrad<-apply(phis,1,pollim,maxs=maxs,mins=mins); 
+  maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
     fp <- env_fitpred(logenv,newdata = oo,maxrad = maxrad);
     snames <- paste0(logenv$fits$radnames,'.se');
@@ -155,8 +155,8 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfra
       maxrad <- maxrad[filterkeep];
       fp <- fp[filterkeep,];
     }
-    oo$mins <- pmax(apply(fp[fnames]-numses*fp[snames],1,min,na.rm=T),0);
-    oo$maxs <- pmin(apply(fp[fnames]+numses*fp[snames],1,max,na.rm=T),maxrad);
+    oo$mins <- pmax(apply(fp[fnames]-numse*fp[snames],1,min,na.rm=T),0);
+    oo$maxs <- pmin(apply(fp[fnames]+numse*fp[snames],1,max,na.rm=T),maxrad);
   } else {oo$mins <- 0; oo$maxs <- maxrad};
   cbind(oo,maxrad);
 }
@@ -198,14 +198,14 @@ resp_preds <- function(tfresp,radii,glmfit,saveglm=F,power=0.8){
 #' number of columns as the length of radii, res_preds() should iterate over each
 #' column
 
-preds_lims <- function(preds,tolse=1,tol=0.01,limit=Inf,radci=2,...){
+preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   # takes the result of iterating res_preds() over each column of tfresps returned
   # by the panel
   # determines which panels failed on latest round 
   notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
   # determines which panels not yet finished::
   #     sepred*setol > tol  | min < 0 | max > limits
-  notdone <- preds['respse',]*tolse > tol;
+  notdone <- preds['respse',] > tol;
   # if all panels failed, catch failure and signal accordingly
   if(!any(notfailed)) return(c(min=NA,max=NA,status=-1,notfailed=notfailed,notdone=notdone)); #TODO: log failure
   # if all non-failed panels converged, return final estimates with failed ones flagged
@@ -214,8 +214,8 @@ preds_lims <- function(preds,tolse=1,tol=0.01,limit=Inf,radci=2,...){
   pnstatus <- 
   if(status<-!any(select <- notfailed & notdone)) select <- notfailed;
   return(c(
-     min=max(min(preds['radest',select] - preds['radse',select]*radci),0)
-    ,max=min(max(preds['radest',select] + preds['radse',select]*radci),limit)
+     min=max(min(preds['radest',select] - preds['radse',select]*numse),0)
+    ,max=min(max(preds['radest',select] + preds['radse',select]*numse),limit)
     ,status=status,notfailed=notfailed,notdone=notdone));
 }
 
@@ -243,7 +243,7 @@ phi_radius <- function(phi,maxrad,pnlst
                        ,pninfo=names(pneval)[!pneval]
                        ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
                        ,logenv=logenv,nrads=20
-                       ,maxs=c(2,4.5,3),mins=c(-3.1,-1.3,-0.5)
+                       ,max=maxrad,min=0,numse=1.5
                        ,ptsim=ptsim_nlin
                        ,wd=paste0(getwd(),'/')
                        # when a file having the name specified by this variable is found, 
@@ -254,6 +254,7 @@ phi_radius <- function(phi,maxrad,pnlst
                        ,savefile=paste0(wd,'pt_result.rdata')
                        # name of file that will be sourced (once and then moved) if found
                        ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
+                       ,phicycle=0
                        ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
@@ -267,11 +268,11 @@ phi_radius <- function(phi,maxrad,pnlst
   # rather than just summary statistics)
   # obtain the maximum allowed radius for the current phis
   # (derived from the cartesian limits maxs and mins)
-  if(missing(maxrad)) maxrad<-pollim(phi,maxs=maxs,mins=mins);
+  #if(missing(maxrad)) maxrad<-pollim(phi,maxs=maxs,mins=mins);
   # lenght of current verdicts
   #nntf <- length(list_tfresp);
   cycle <- 1;
-  lims <- c(min=0,max=maxrad,status=0);
+  lims <- c(min=min,max=max,status=0);
   list_tfresp <- list_radii <- list();
   tfoffset <- 0;
   t0 <- Sys.time();
@@ -285,12 +286,12 @@ phi_radius <- function(phi,maxrad,pnlst
     }
     # then fit models on the panel verdicts (T/F), tfresp
     # na.omits might be unnecessary
-    testtf<-na.omit(data.frame(do.call(rbind,list_tfresp)));
-    testrd<-na.omit(unlist(list_radii));
+    testtf<-data.frame(do.call(rbind,list_tfresp));
+    testrd<-unlist(list_radii);
     #if(length(testrd)!=nrow(testtf)) browser();
     preds <- sapply(testtf,resp_preds,radii=testrd);
     #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
-    lims <- preds_lims(preds,limit=maxrad);
+    lims <- preds_lims(preds,limit=maxrad,numse = numse);
     if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
     # Currently, we give up on this entire set of phis and exit from phi_radius()
     # the first cycle when glm fails for all panel functions regardless of why.
@@ -345,9 +346,16 @@ phi_radius <- function(phi,maxrad,pnlst
 test_harness<-function(logenv=logenv
                        #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
                        ,maxs=c(20,20,20),mins=c(-20,-20,-20)
-                       ,npoints=50,nphi=2,nrads=20
-                       ,pnlst=list(lm=ptpnl_lm
-                                   ,lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group)
+                       ,npoints=50,nphis=2,nrads=20,numse=2
+                       # which fraction of the most impactful phis should we 
+                       # model each time?
+                       ,wd=paste0(getwd(),'/'),savetrigger=paste0(wd,'pt_savedata')
+                       ,debugtrigger=paste0(wd,'pt_debug')
+                       ,savefile=paste0(wd,'pt_result.rdata')
+                       ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
+                       ,bestfrac = 0.5
+                       ,pnlst=list(#lm=ptpnl_lm
+                                   lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group)
                                    ,tt=ptpnl_tt
                                    ,wx=ptpnl_wx
                                    ,summ=ptpnl_summary)
@@ -355,26 +363,30 @@ test_harness<-function(logenv=logenv
   #phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
   # trying more regularly spaced phis, to get a handle on the weird output
   # 10 intervals per phi results in 10,000 distinct points
-  phiseq <- sample(seq(0,pi,length.out=npoints),npoints,rep=F);
+  #phiseq <- sample(seq(0,pi,length.out=npoints),npoints,rep=F);
   #browser();
-  phis <- as.matrix(do.call(expand.grid,c(replicate(nphi-1,phiseq,simplify=F),list(sample(seq(0,2*pi,length.out = npoints),npoints,rep=F)))));
-  logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
-  npoints <- nrow(phis);
+  #phis <- as.matrix(do.call(expand.grid,c(replicate(nphi-1,phiseq,simplify=F),list(sample(seq(0,2*pi,length.out = npoints),npoints,rep=F)))));
+  phis <- make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
+                    ,nphis = nphis,numse = numse);
+  #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
+  actualpoints <- nrow(phis);
   pneval_ <- sapply(pnlst,attr,'eval');
   pnfit <- names(pneval_)[pneval_];
   pninfo <- names(pneval_)[!pneval_];
-  wd <- paste0(getwd(),'/');
-  for(ii in 1:npoints){
+  phicycle <- 1;
+  for(ii in seq_len(actualpoints)){
     cat(ii,'\t|');
-    phi_radius(phi=phis[ii,],maxrad=maxrads[ii],pnlst=pnlst
+    phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
                ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
-               ,logenv=logenv,maxs=maxs,mins=mins,nrads=nrads
+               ,logenv=logenv,max=phis[ii,'maxs'],min=phis[ii,'mins'],nrads=nrads
+               ,numse=numse
                ,ptsim=ptsim
                ,wd=wd
-               ,savetrigger=paste0(wd,'pt_savedata')
-               ,debugtrigger=paste0(wd,'pt_debug')
-               ,savefile=paste0(wd,'pt_result.rdata')
-               ,sourcepatch=paste0(wd,'pt_sourcepatch.R'));
+               ,savetrigger=savetrigger
+               ,debugtrigger=debugtrigger
+               ,savefile=savefile
+               ,sourcepatch=sourcepatch
+               ,phicycle=phicycle);
   }
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
     phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)

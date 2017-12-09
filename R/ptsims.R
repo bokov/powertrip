@@ -141,7 +141,7 @@ ptpnl_summary <- new.ptpnl('summ'
                            #,nsims.=quote(length(list_tfresp))
                            #,phi.=quote(phi)
                            ,time=quote(Sys.time())
-                           ,literals=c('coords','cycle','phi','preds','lims','maxrad')
+                           ,literals=c('coords','cycle','phi','preds','lims','maxrad','phicycle')
                            #,philabel_= quote(callingframe$philabel)
                            #,preds.=quote(preds)
                            #,philabel_=quote(philabel)
