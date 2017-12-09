@@ -124,7 +124,9 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
 
 #' Only the first argument is required if logenv is not initialized
 #' 
-make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfrac=0.5,numse=2,fresh=F,...){
+make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.5,numse=2,fresh=F,...){
+  # Note: do not change phi prefix without also changing the fields argument of
+  # pt2df() or the generation of subsequent rounds of phis will break
   # if no data obtained yet or fresh manually set to T then phiprefix and nphis
   # are required arguments' logenv and npoints are always required
   # so are maxs and mins until/unless they get saved in logenv as well...
@@ -141,7 +143,7 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfra
   } else {
     phinames <- paste0(phiprefix,seq_len(nphis));
   }
-  oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(nphis));
+  oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
   colnames(oo) <- paste0(phiprefix,seq_len(nphis));
   maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
@@ -164,7 +166,7 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi.Var',bestfra
 #' Any arguments in ... are treated as expressions to evaluate in the context of
 #' ptenv$coords[[XXX]][[summname]]
 pt2df <- function(ptenv,summname='summ'
-                  ,fields=alist(rad=preds['radest',],phi=phi,conv=preds['conv',],nsims=nsims,time=time,maxrad=maxrad,lims=lims)
+                  ,fields=alist(rad=preds['radest',],phi=unname(phi),conv=preds['conv',],nsims=nsims,time=time,maxrad=maxrad,lims=lims)
                   ,...){
   dots <- as.list(substitute(list(...))[-1]);
   # to the default fields below add in maxrad=maxrad next time logenv is rebuilt
@@ -292,7 +294,7 @@ phi_radius <- function(phi,maxrad,pnlst
     preds <- sapply(testtf,resp_preds,radii=testrd);
     #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     lims <- preds_lims(preds,limit=maxrad,numse = numse);
-    if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
+    #if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
     # Currently, we give up on this entire set of phis and exit from phi_radius()
     # the first cycle when glm fails for all panel functions regardless of why.
     # TODO: this doesn't go far enough-- find a way to detect > X% NAs in the 
@@ -304,7 +306,7 @@ phi_radius <- function(phi,maxrad,pnlst
     #       ptpnl_summary especially the phi
     # TODO: implement error logging for ptpnl_ functions
     # TODO: in normal result logging for ptpnl_ functions retain the verdict as well
-    # TODO: consider not bothering with na.omit since glm probably does it
+    # DONE: consider not bothering with na.omit since glm probably does it
     #       internally anyway. Makes it easier to find fraction NA too (above TODO)
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
     if(file.exists(savetrigger)) {
@@ -339,7 +341,7 @@ phi_radius <- function(phi,maxrad,pnlst
   # DONE?: figure out why negative radii are being allowed and fix
   # DONE?: figure out why plots look so wierd... is pol2crt wrong?
   # TODO: finalize outer function
-  # TODO: launch the linear model version
+  # DONE?: launch the linear model version
   # TODO: try to resurrect simsurve and survwrapper
 }
 
@@ -359,37 +361,48 @@ test_harness<-function(logenv=logenv
                                    ,tt=ptpnl_tt
                                    ,wx=ptpnl_wx
                                    ,summ=ptpnl_summary)
-                       ,ptsim=ptsim_nlin,...){
+                       ,ptsim=ptsim_nlin
+                       # technically this can run forever continuously generating
+                       # better predictions and get stopped from an external R
+                       # session via ptmg()... but it feels wrong to not install
+                       # an automatic off-switch, so we will have maxphicycle
+                       # if we do need literally indefinite runtime just set 
+                       # this to Inf
+                       ,maxphicycle=1e6,...){
   #phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
   # trying more regularly spaced phis, to get a handle on the weird output
   # 10 intervals per phi results in 10,000 distinct points
   #phiseq <- sample(seq(0,pi,length.out=npoints),npoints,rep=F);
   #browser();
   #phis <- as.matrix(do.call(expand.grid,c(replicate(nphi-1,phiseq,simplify=F),list(sample(seq(0,2*pi,length.out = npoints),npoints,rep=F)))));
-  phis <- make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
-                    ,nphis = nphis,numse = numse);
-  #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
-  actualpoints <- nrow(phis);
   pneval_ <- sapply(pnlst,attr,'eval');
   pnfit <- names(pneval_)[pneval_];
   pninfo <- names(pneval_)[!pneval_];
-  phicycle <- 1;
-  for(ii in seq_len(actualpoints)){
-    cat(ii,'\t|');
-    phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
-               ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
-               ,logenv=logenv,max=phis[ii,'maxs'],min=phis[ii,'mins'],nrads=nrads
-               ,numse=numse
-               ,ptsim=ptsim
-               ,wd=wd
-               ,savetrigger=savetrigger
-               ,debugtrigger=debugtrigger
-               ,savefile=savefile
-               ,sourcepatch=sourcepatch
-               ,phicycle=phicycle);
+  phicycle <- 1; 
+  while(phicycle < maxphicycle){
+    phis <- make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
+                      ,nphis = nphis,numse = numse);
+    #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
+    actualpoints <- nrow(phis);
+    for(ii in seq_len(actualpoints)){
+      cat(ii,'\t|');
+      phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
+                 ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
+                 ,logenv=logenv,max=phis[ii,'maxs'],min=phis[ii,'mins'],nrads=nrads
+                 ,numse=numse
+                 ,ptsim=ptsim
+                 ,wd=wd
+                 ,savetrigger=savetrigger
+                 ,debugtrigger=debugtrigger
+                 ,savefile=savefile
+                 ,sourcepatch=sourcepatch
+                 ,phicycle=phicycle);
+    }
+    phicycle<-phicycle+1
   }
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
     phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)
     ,time=time,nsims=nsims,cycle=cycle)))));
+  browser();
 };
 # Timing stopped at: 6573 5411 6740 ... about 1.87 hours to try 1000 pairs of phis
