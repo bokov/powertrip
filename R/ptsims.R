@@ -32,10 +32,6 @@ ptsim_2lin <- function(coords,nn=100,refcoords=rep_len(0,length(coords)),...){
 }
 
 ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refcoords=coords*0,...){
-  # we want an even number of coordinates so that half as many numeric variables can be generated
-  # to make this run faster presumably we should ahead of time specify externally coordnames, lcoord,
-  # and avoid odd coordinate lengths
-  #if(lcoords%%2) {lcoords<-lcoords+1; coords<-setNames(c(coords,0),coordnames<-c(coordnames,make.names(lcoords)))};
   # notice that refcoords automagically are the right length regardless of whether or not the above if()
   # statement is triggered-- I suspect this is due to lazy evaluation-- refcoords remain a call until 
   # they are used in the following expression...
@@ -45,6 +41,15 @@ ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refc
                     ,xs
                     ,yy=ifelse(seq_len(2*nn)<=nn,refcoords[1]+xs %*% refcoords[-1],coords[1]+xs %*%coords[-1])+rnorm(2*nn));
 }
+
+#' Needs: rlgst.R, rlogmake.R, and the eha package
+ptsim_surv <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015),...){
+  coords<- coords+refcoords;
+  out <- data.frame(group=rep(c('control','treated'),each=nn)
+                    ,yy=c(simsurv(nn,'lm',refcoords),simsurv(nn,'lm',coords))
+                    ,cc=1);
+}
+#simsurv (n, type = "g", p = c(2.433083e-05, 0.005, 3e-11, 0.0015)) 
 #' The following works!
 #' 
 #ptsim_nlin(pol2crt(c(1.06,5.124,2,-0.5))) -> foo;
@@ -138,23 +143,20 @@ ptpnl_qntile <- new.ptpnl("qntile"
 
 ptpnl_simsumm <- new.ptpnl('simsm'
                               ,fit = split(data.frame(data),data.frame(data)[,1])
-                              ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
-                                          ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
-                                          ,nsims=length(callingframe$list_tfresp)
-                                          ,time=time));
+                              ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)));
                               
-ptpnl_phisumm <- new.ptpnl('phism'
+ptpnl_phisumm <- new.ptpnl('summ'
+                           ,fit=c()
                            #,fit = split(data.frame(data),data.frame(data)[,1])
                            ,time=quote(Sys.time())
                            ,literals=c('coords','cycle','phi','preds','lims','maxrad','phicycle')
-                           ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
-                                       ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
+                           ,result = c(sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
                                        ,nsims=length(callingframe$list_tfresp)
                                        ,time=time)
 );
 #' NOTE: avoid creating variables that match the regexp "^phi[0-9]$" because 
 #' env_fitinit() will mistake them for phinames
-ptpnl_summary <- new.ptpnl('summ'
+ptpnl_summary <- new.ptpnl('summ.old'
                            ,fit = split(data.frame(data),data.frame(data)[,1])
                            #,cycles.=quote(cycle)
                            #,nsims.=quote(length(list_tfresp))

@@ -96,7 +96,7 @@ env_fitpred <- function(logenv,newdata
   if(!is.null(maxrad)){
     fnames<-paste0(logenv$fits$radnames,'.fit');
     snames<-paste0(logenv$fits$radnames,'.se');
-    ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrads);
+    ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrad);
     oo[fnames][ex] <- NA;
     oo[snames][ex] <- NA;
   }
@@ -187,18 +187,30 @@ pt2df <- function(ptenv,summname='summ'
 
 #' # Core functions
 #' 
-resp_preds <- function(tfresp,radii,glmfit,saveglm=F,power=0.8){
+#' tfresp is a vector of T/F, radii is a numeric vector
+#' power is the target hit-rate (i.e. we are predicting the radius at which 
+#' tfresp should be T power fraction of the time) and narate is what fraction
+#' of the values in tfresp may be NA before this is treated as an error
+resp_preds <- function(tfresp,radii,power=0.8,narate=0.5){
   # think about what to do when this function fails
-  if(missing(glmfit)) {glmfit <- glm(tfresp~radii,family='binomial') } else {
-    glmfit <- update(glmfit) };
-  out <- MASS::dose.p(glmfit,p=power);
-  out <- setNames(c(out[1],attr(out,'SE')
-           ,with(predict(glmfit,newdata=data.frame(radii=out[1]),type='resp',se.fit=T)
-                 ,c(fit[1],se.fit[1]))
-           ,glmfit$converged)
-           ,c('radest','radse','respest','respse','conv'));
-  if(saveglm) attr(out,'glmfit') <- glmfit;
-  out;
+  #if(missing(glmfit)) {glmfit <- glm(tfresp~radii,family='binomial') } else {
+  #  glmfit <- update(glmfit) };
+  # system.time shows that creating the fit de-novo is faster than updating
+  outnames <- c('radest','radse','respect','respse','conv');
+  outerror <- setNames(c(rep(NA,length(outnames)-1),-1),outnames);
+  okay <- !is(try(nas<-mean(is.na(tfresp))),'try-error');
+  if(okay & nas < narate) {
+    okay <- is(glmfit <- try(glm(tfresp~radii,family='binomial')),'glm');
+  } else return(outerror);
+  if(okay) {
+    okay <- is(out <- try(MASS::dose.p(glmfit,p=power)),'glm.dose');
+  } else return(outerror);
+  if(okay){
+    return(setNames(c(out[1],attr(out,'SE')
+                      ,with(predict(glmfit,newdata=data.frame(radii=out[1])
+                                    ,type='resp',se.fit=T),c(fit[1],se.fit[1]))
+                      ,glmfit$converged),outnames));
+    } else return(outerr);
   # fits glmfit object to tfresp ~ radius or updates optionally passed glmfit
   # returns vector that contains reverse predictor for radius, se for reverse
   # predictor, and se of prediction of glmfit when evaluated at reverse predictor
@@ -221,7 +233,7 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   # if all non-failed panels converged, return final estimates with failed ones flagged
   # if there are any non-failed non-converged panels
   # returns a single max and min for the next round of radii based on those
-  pnstatus <- 
+  #pnstatus <- 
   if(status<-!any(select <- notfailed & notdone)) select <- notfailed;
   return(c(
      min=max(min(preds['radest',select] - preds['radse',select]*numse),0)
@@ -247,7 +259,7 @@ radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
 testenv <- new.env();
 load('data/testdata.rda',envir = testenv);
 
-phi_radius <- function(phi,maxrad,pnlst
+phi_radius <- function(phi,maxrad,pnlst,pnlph
                        ,pneval=sapply(pnlst,attr,'eval')
                        ,pnfit=names(pneval)[pneval]
                        ,pninfo=names(pneval)[!pneval]
@@ -290,16 +302,18 @@ phi_radius <- function(phi,maxrad,pnlst
     list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']);
     for(ii in 1:nrads){
       iicoords <- c(list_radii[[cycle]][ii],phi);
+      # TODO: pre-calculate lcoords, lvars, and refcoords and pass to ptsim
       iidat <- ptsim(pol2crt(iicoords));
       list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
-      if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
+      #if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
     # then fit models on the panel verdicts (T/F), tfresp
     # na.omits might be unnecessary
     testtf<-data.frame(do.call(rbind,list_tfresp));
     testrd<-unlist(list_radii);
     #if(length(testrd)!=nrow(testtf)) browser();
-    preds <- sapply(testtf,resp_preds,radii=testrd);
+    preds <- try(sapply(testtf,resp_preds,radii=testrd));
+    if(class(preds)[1]=='try-error') browser();
     #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     lims <- preds_lims(preds,limit=maxrad,numse = numse);
     #if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
@@ -333,11 +347,14 @@ phi_radius <- function(phi,maxrad,pnlst
     cat('Success: ');
     for(pp in pnfit) {
       ppdat <-ptsim(pol2crt(c(preds['radest',pp],phi))); 
+      # TODO: not sure we actually needs to explicitly specify index, they seem
+      # to be properly handling it anyway
       pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
       # for each pp (verdict-returning panel function) we generate a separate dataset therefore
       # we need to iterate over all the summary-only non-verdict functions for each of these datasets
-      for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq),time=Sys.time()-t0);
+      for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
+    pnlph(ppdat,preds['radest',],logenv=logenv,time=Sys.time()-t0);
   } else cat('Failure: ');
   cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
@@ -364,11 +381,14 @@ test_harness<-function(logenv=logenv
                        ,savefile=paste0(wd,'pt_result.rdata')
                        ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
                        ,bestfrac = 0.5
+                       # these run at the level of each radius
                        ,pnlst=list(#lm=ptpnl_lm
                                    lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group)
                                    ,tt=ptpnl_tt
                                    ,wx=ptpnl_wx
-                                   ,summ=ptpnl_summary)
+                                   ,simsm=ptpnl_simsumm)
+                       # this runs on each set of phis
+                       ,pnlph=ptpnl_phisumm
                        ,ptsim=ptsim_nlin
                        # technically this can run forever continuously generating
                        # better predictions and get stopped from an external R
@@ -395,6 +415,7 @@ test_harness<-function(logenv=logenv
     for(ii in seq_len(actualpoints)){
       cat(ii,'\t|');
       phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
+                 ,pnlph=ptpnl_phisumm
                  ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
                  ,logenv=logenv,max=phis[ii,'maxs'],min=phis[ii,'mins'],nrads=nrads
                  ,numse=numse
@@ -406,6 +427,7 @@ test_harness<-function(logenv=logenv
                  ,sourcepatch=sourcepatch
                  ,phicycle=phicycle);
     }
+    if(phicycle==1) browser();
     phicycle<-phicycle+1
   }
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
