@@ -386,6 +386,16 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
   # TODO: try to resurrect simsurve and survwrapper
 }
 
+#' Sobering thought: right now this averages about 0.006 seconds per simulation
+#' opsurv() can do about 13 simulations per second
+# > system.time(.junk<-replicate(200,opsurv(foo,foo,model='lm')))
+# user  system elapsed 
+# 15.477   0.008  15.734 
+# > 200/15.5
+# [1] 12.90323
+#' ...which means that it tacks on 0.0775 or ~0.08 seconds per simulation 
+#' meaning that is multiplies runtimes 14.3-fold!
+
 test_harness<-function(logenv=logenv
                        #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
                        ,maxs=c(20,20,20),mins=c(-20,-20,-20)
