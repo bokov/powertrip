@@ -156,6 +156,7 @@ ptpnl_phisumm <- new.ptpnl('summ'
 );
 #' NOTE: avoid creating variables that match the regexp "^phi[0-9]$" because 
 #' env_fitinit() will mistake them for phinames
+#' 
 ptpnl_summary <- new.ptpnl('summ.old'
                            ,fit = split(data.frame(data),data.frame(data)[,1])
                            #,cycles.=quote(cycle)
@@ -174,6 +175,8 @@ ptpnl_summary <- new.ptpnl('summ.old'
                            #,index=substitute(c('coords',`philabel_`,'summ')));
 );
 
+# TODO: change all the below functions to automatically tack on a detect=eval(eval.)
+# onto their result argument
 ptpnl_wx <- new.ptpnl("wx"
                       , fit = wilcox.test(frm, data)
                       , result = list(model=broom::glance(fit),detect=eval(eval.))

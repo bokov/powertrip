@@ -76,7 +76,9 @@ and use the defaults.");}
       out.old<-out;
       if(verbose>1) cat(".");
 			#options(show.error.messages=F);
-      out<-try(.Internal(optim(out.old[[1]],fn,gr,method,ctrl,lb,ub)),T);
+      #out<-try(.Internal(optim(out.old[[1]],fn,gr,method,ctrl,lb,ub)),T);
+      # I guess R changed how optim gets called...
+      out<-try(.External2(stats:::C_optim, out.old[[1]], fn, gr, method, ctrl, lb,ub),T);
 			#if(length(out)==1) browser();
 			#cat('cx:',cx,'\n','cy:',cy,'\n');
 			#options(show.error.messages=T);
