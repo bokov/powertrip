@@ -28,7 +28,8 @@ load.ptenv <- function(file='pt_result.rdata',env=new.env(),logenvonly=T,savewai
 #' Extract from a pt-derived dataframe a cartesian one with the selected 
 #' columns as radius and phis
 dfcrt <- function(data,radius,phis=c('phi.Var1','phi.Var2'),subset=T){
-  data.frame(pol2crt(subset(data,subset=subset)[,c(radius,phis)]));
+  subset<-substitute(subset);
+  data.frame(pol2crt(subset(data,subset=eval(subset))[,c(radius,phis)]));
 };
 
 #' Set up lm fits and predictions in logenv to subsequently update
