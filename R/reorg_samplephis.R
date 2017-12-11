@@ -303,7 +303,7 @@ radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
 #testenv <- new.env();
 #load('data/testdata.rda',envir = testenv);
 
-phi_radius <- function(phi,maxrad,pnlst,pnlph
+phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
                        ,pneval=sapply(pnlst,attr,'eval')
                        ,pnfit=names(pneval)[pneval]
                        ,pninfo=names(pneval)[!pneval]
@@ -339,6 +339,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
   #nntf <- length(list_tfresp);
   cycle <- 1;
   lims <- c(min=min,max=max,status=0);
+  btrefcoords <- backtrans(refcoords);
   list_tfresp <- list_radii <- list();
   tfoffset <- 0;
   t0 <- Sys.time();
@@ -351,14 +352,10 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
         list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])
         # turn the static coordinate vector into matrix with one column for each
         # phi and nrads rows
-        ,rbind(phi)[rep_len(1,nrads),])) + 
-        # this concludes pol2crt but we still need to put it back to absolute 
-        # coordinates by adding refcoords which have similarly been converted
-        # into a matrix of the appropriate dimension
-        rbind(refcoords)[rep_len(1,nrads),]);
+        ,rbind(phi)[rep_len(1,nrads),])));
     for(ii in 1:nrads){
       # TODO: pre-calculate lcoords, lvars, and refcoords and pass to ptsim
-      iidat <- ptsim(cyclecoords[ii,],...);
+      iidat <- ptsim(cyclecoords[ii,],refcoords=btrefcoords,...);
       list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
       #if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
@@ -400,9 +397,9 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
   };
   if(lims['status']==1){
     cat('Success: ');
-    for(pp in pnfit) {
-      ppcoords <- backtrans(pol2crt(c(ptrfd['radest',pp],phi))+refcoords);
-      ppdat <-ptsim(ppcoords,...); 
+    for(pp in pnfit[preds['conv',]==1]) {
+      ppcoords <- backtrans(pol2crt(c(preds['radest',pp],phi)));
+      ppdat <-ptsim(ppcoords,refcoords=btrefcoords,...); 
       # TODO: not sure we actually needs to explicitly specify index, they seem
       # to be properly handling it anyway
       pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
@@ -436,7 +433,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
 #' ...which means that it tacks on 0.0775 or ~0.08 seconds per simulation 
 #' meaning that is multiplies runtimes 14.3-fold!
 
-powertrip<-function(logenv=logenv
+powertrip<-function(logenv=logenv,refcoords
                        #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
                        ,maxs=c(20,20,20),mins=c(-20,-20,-20)
                        ,npoints=50,nphis=2,nrads=20,numse=2
@@ -485,6 +482,7 @@ powertrip<-function(logenv=logenv
     for(ii in seq_len(actualpoints)){
       cat(phicycle,'\t',ii,'\t');
       phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
+                 ,refcoords = refcoords
                  ,pnlph=ptpnl_phisumm
                  ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
                  ,logenv=logenv,max=phis[ii,'maxs'],min=phis[ii,'mins'],nrads=nrads
