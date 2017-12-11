@@ -396,7 +396,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
 #' ...which means that it tacks on 0.0775 or ~0.08 seconds per simulation 
 #' meaning that is multiplies runtimes 14.3-fold!
 
-test_harness<-function(logenv=logenv
+powertrip<-function(logenv=logenv
                        #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
                        ,maxs=c(20,20,20),mins=c(-20,-20,-20)
                        ,npoints=50,nphis=2,nrads=20,numse=2
@@ -451,7 +451,7 @@ test_harness<-function(logenv=logenv
                  ,debugtrigger=debugtrigger
                  ,savefile=savefile
                  ,sourcepatch=sourcepatch
-                 ,phicycle=phicycle);
+                 ,phicycle=phicycle,...);
     }
     if(phicycle==1) browser();
     phicycle<-phicycle+1

@@ -130,10 +130,10 @@ new.ptpnl <- function(fname,fit,result,eval.,...){
 #' Example use:
 #' 
 #' panel function that returns a decision
-ptpnl_passthru <- new.ptpnl("passthru"
-                            , fit = data[[1]][1]
-                            , result = list(summary = fit, coords = coords, call = match.call(expand.dots = T))
-                            , eval = fit[1] == 1);
+#ptpnl_passthru <- new.ptpnl("passthru"
+#                            , fit = data[[1]][1]
+#                            , result = list(summary = fit, coords = coords, call = match.call(expand.dots = T))
+#                            , eval = fit[1] == 1);
 #' panel function to be used just for generating a summary result
 
 ptpnl_qntile <- new.ptpnl("qntile"
