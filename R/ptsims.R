@@ -46,10 +46,11 @@ ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refc
 ptsim_surv <- function(coords,nn=100,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015),type='lm',...){
   # 
   coords<- coords*refcoords;
-  out <- data.frame(group=rep(c('control','treated'),each=nn)
+  out <- try(data.frame(group=rep(c('control','treated'),each=nn)
                     ,yy=c(simsurv(nn,type,refcoords)
                           ,simsurv(nn,type,coords))
-                    ,cc=1);
+                    ,cc=1));
+  if(is(out,'try-error')) return(expand.grid(group=c('control','treated'),yy=-1,cc=-1));
 }
 #simsurv (n, type = "g", p = c(2.433083e-05, 0.005, 3e-11, 0.0015)) 
 #' The following works!
