@@ -50,7 +50,7 @@ ptsim_surv <- function(coords,nn=100,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0
                     ,yy=c(simsurv(nn,type,refcoords)
                           ,simsurv(nn,type,coords))
                     ,cc=1));
-  if(is(out,'try-error')) return(expand.grid(group=c('control','treated'),yy=-1,cc=-1));
+  if(is(out,'try-error')) return(expand.grid(group=c('control','treated'),yy=-1,cc=-1)) else out;
 }
 #simsurv (n, type = "g", p = c(2.433083e-05, 0.005, 3e-11, 0.0015)) 
 #' The following works!

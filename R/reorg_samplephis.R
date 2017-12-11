@@ -210,7 +210,7 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.
     # meaningless anyway, so replacing NAs with 0s or maxrad values
     #oo$mins <- pmax(apply(fp[fnames]-numse*fp[snames],1,min,na.rm=T),0);
     oo$mins <- apply(fp[,fnames,drop=F]-numse*fp[,snames,drop=F],1,min,na.rm=T);
-    oo$mins[is.infinite(oo$mins)]<- -37 #0; TODO: properly handle this case instead of hardcoded value which will break for non-log cases
+    oo$mins[is.infinite(oo$mins)]<- 0; #0; TODO: properly handle this case instead of hardcoded value which will break for non-log cases
     oo$maxs <- pmin(apply(fp[fnames]+numse*fp[snames],1,max,na.rm=T),maxrad);
     oo$maxs[is.infinite(oo$maxs)]<-maxrad[is.infinite(oo$maxs)];
   } else {oo$mins <- 0; oo$maxs <- maxrad};
@@ -276,14 +276,14 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   #     sepred*setol > tol  | min < 0 | max > limits
   notdone <- preds['respse',] > tol;
   # if all panels failed, catch failure and signal accordingly
-  if(!any(notfailed)) return(c(min=NA,max=NA,status=-1,notfailed=notfailed,notdone=notdone)); #TODO: log failure
+  if(!any(notfailed,na.rm=T)) return(c(min=NA,max=NA,status=-1,notfailed=notfailed,notdone=notdone)); #TODO: log failure
   # if all non-failed panels converged, return final estimates with failed ones flagged
   # if there are any non-failed non-converged panels
   # returns a single max and min for the next round of radii based on those
   #pnstatus <- 
   if(status<-!any(select <- notfailed & notdone)) select <- notfailed;
   return(c(
-     min=max(min(preds['radest',select] - preds['radse',select]*numse),-37) # used to be 0
+     min=max(min(preds['radest',select] - preds['radse',select]*numse),0) # used to be 0
     ,max=min(max(preds['radest',select] + preds['radse',select]*numse),limit)
     ,status=status,notfailed=notfailed,notdone=notdone));
 }
