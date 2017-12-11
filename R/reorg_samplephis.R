@@ -27,7 +27,7 @@ load.ptenv <- function(file='pt_result.rdata',env=new.env(),logenvonly=T,savewai
 
 #' Extract from a pt-derived dataframe a cartesian one with the selected 
 #' columns as radius and phis
-dfcrt <- function(data,radius,phis=c('phi.Var1','phi.Var2'),subset=T){
+dfcrt <- function(data,radius,phis=c('phi1','phi2'),subset=T){
   subset<-substitute(subset);
   data.frame(pol2crt(subset(data,subset=eval(subset))[,c(radius,phis)]));
 };
