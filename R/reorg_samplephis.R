@@ -124,7 +124,8 @@ env_fitpred <- function(logenv,newdata
   if(!is.null(maxrad)){
     fnames<-paste0(logenv$fits$radnames,'.fit');
     snames<-paste0(logenv$fits$radnames,'.se');
-    ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrad);
+    #ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrad);
+    ex <- apply(oo[,fnames,drop=F],2,function(xx) xx>maxrad);
     oo[fnames][ex] <- NA;
     oo[snames][ex] <- NA;
     # apparently especially with small samples you can get negative nsims!
@@ -207,8 +208,9 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.
     # because of the addback hack above, we now have phis with NA-only radius
     # predictions getting added back in. That's okay, if they are NA they are 
     # meaningless anyway, so replacing NAs with 0s or maxrad values
-    oo$mins <- pmax(apply(fp[fnames]-numse*fp[snames],1,min,na.rm=T),0);
-    oo$mins[is.infinite(oo$mins)]<-0;
+    #oo$mins <- pmax(apply(fp[fnames]-numse*fp[snames],1,min,na.rm=T),0);
+    oo$mins <- apply(fp[,fnames,drop=F]-numse*fp[,snames,drop=F],1,min,na.rm=T);
+    oo$mins[is.infinite(oo$mins)]<- -37 #0; TODO: properly handle this case instead of hardcoded value which will break for non-log cases
     oo$maxs <- pmin(apply(fp[fnames]+numse*fp[snames],1,max,na.rm=T),maxrad);
     oo$maxs[is.infinite(oo$maxs)]<-maxrad[is.infinite(oo$maxs)];
   } else {oo$mins <- 0; oo$maxs <- maxrad};
@@ -268,7 +270,8 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   # takes the result of iterating res_preds() over each column of tfresps returned
   # by the panel
   # determines which panels failed on latest round 
-  notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
+  #notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
+  notfailed <- preds['conv',]==1 & preds['radest'] < limit;
   # determines which panels not yet finished::
   #     sepred*setol > tol  | min < 0 | max > limits
   notdone <- preds['respse',] > tol;
@@ -280,7 +283,7 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   #pnstatus <- 
   if(status<-!any(select <- notfailed & notdone)) select <- notfailed;
   return(c(
-     min=max(min(preds['radest',select] - preds['radse',select]*numse),0)
+     min=max(min(preds['radest',select] - preds['radse',select]*numse),-37) # used to be 0
     ,max=min(max(preds['radest',select] + preds['radse',select]*numse),limit)
     ,status=status,notfailed=notfailed,notdone=notdone));
 }
