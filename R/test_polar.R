@@ -116,7 +116,10 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
   if(length(mins)!=length(coords)+1 && length(mins)>1) stop('mins should be 1 more than length of coords');
   maxs <- rep_len(maxs,length(coords)+1); mins <- rep_len(mins,length(coords)+1);
   oo <- c(maxs,mins)/(c(cos(coords),1)*cumprod(c(1,sin(coords))));
-  min(pmax(oo,0));
+  # oops, that was still not right-- min pmax(oo,0) should return 0s , why did 
+  # that work at all? Let's try this instead.
+  if(any(oo>0)) min(oo[oo>0]) else 0;
+  #min(pmax(oo,0));
   # aha! hello and goodbye, bug! If oo is all negative, the below becomes Inf
   #min(oo[oo>0]);
 }

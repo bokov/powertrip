@@ -27,10 +27,37 @@ load.ptenv <- function(file='pt_result.rdata',env=new.env(),logenvonly=T,savewai
 
 #' Extract from a pt-derived dataframe a cartesian one with the selected 
 #' columns as radius and phis
-dfcrt <- function(data,radius,phis=c('phi1','phi2'),subset=T){
+dfcrt <- function(data,radius,phis=c('phi1','phi2')
+                  ,refcoords=0,transform=identity,subset=T){
   subset<-substitute(subset);
-  data.frame(pol2crt(subset(data,subset=eval(subset))[,c(radius,phis)]));
+  oo<-data.frame(pol2crt(subset(data,subset=eval(subset))[,c(radius,phis)]));
+  if(any(refcoords!=0)){
+    if(length(refcoords)==1) refcoords <- rep_len(refcoords,length(phis)+1);
+    oo <- oo + rbind(refcoords)[rep_len(1L,nrow(oo)),]
+  }
+  invisible(transform(oo));
 };
+
+# required: maxs, mins, if phis missing then 
+make_polgrid <- function(maxs,mins,phis,nticks=10,refcoords=0*maxs
+                         ,nphis=1
+                         # maxes and mins relative to refcoords
+                         ,relmaxs=maxs-refcoords,relmins=mins-refcoords,...){
+  # TODO: more error checking
+  if(!missing(phis)) {phis <- cbind(phis); nphis <- ncol(phis)}; 
+  if(length(relmaxs)!=nphis+1||length(relmins)!=nphis+1){
+    if(missing(phis)) stop('Please set the nphis argument to one less than the length of the maxs and mins argument') else {
+      stop('Please provide maxs and mins such that both are one longer than the number of columns in phis')
+    }
+  }
+  if(missing(phis)) {
+    phiseq <- seq(0,pi,length.out = nticks);
+    phis<-do.call(expand.grid,c(replicate(nphis-1,phiseq,simplify=F),list(seq(0,2*pi,length.out = nticks))));
+  }
+  phis$maxrad <- apply(phis,1,pollim,maxs=relmaxs,mins=relmins);
+  dfcrt(phis,'maxrad',colnames(phis)[seq_len(nphis)],refcoords,...);
+  #dfcrt(data=phis,radius = 'maxrad',phis=colnames(phis),refcoords=refcoords,...)
+}
 
 #' Set up lm fits and predictions in logenv to subsequently update
 #' Note: this function intentionally blows away anything already in
@@ -273,8 +300,8 @@ radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
   # by each function of pnlst() (T/F)
 }
 
-testenv <- new.env();
-load('data/testdata.rda',envir = testenv);
+#testenv <- new.env();
+#load('data/testdata.rda',envir = testenv);
 
 phi_radius <- function(phi,maxrad,pnlst,pnlph
                        ,pneval=sapply(pnlst,attr,'eval')
@@ -293,7 +320,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
                        ,savefile=paste0(wd,'pt_result.rdata')
                        # name of file that will be sourced (once and then moved) if found
                        ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
-                       ,phicycle=0
+                       ,phicycle=0,backtrans=identity
                        ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
@@ -316,11 +343,22 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
   tfoffset <- 0;
   t0 <- Sys.time();
   while(lims['status']==0){
-    list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']);
+    # if the coords have been transformed, backtrans puts them back on the scale
+    # that ptsim() expects
+    cyclecoords <- backtrans(
+      pol2crt(cbind(
+        # save untransformed randomly generated radians for later
+        list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])
+        # turn the static coordinate vector into matrix with one column for each
+        # phi and nrads rows
+        ,rbind(phi)[rep_len(1,nrads),])) + 
+        # this concludes pol2crt but we still need to put it back to absolute 
+        # coordinates by adding refcoords which have similarly been converted
+        # into a matrix of the appropriate dimension
+        rbind(refcoords)[rep_len(1,nrads),]);
     for(ii in 1:nrads){
-      iicoords <- c(list_radii[[cycle]][ii],phi);
       # TODO: pre-calculate lcoords, lvars, and refcoords and pass to ptsim
-      iidat <- ptsim(pol2crt(iicoords),...);
+      iidat <- ptsim(cyclecoords[ii,],...);
       list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
       #if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
@@ -363,7 +401,8 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
   if(lims['status']==1){
     cat('Success: ');
     for(pp in pnfit) {
-      ppdat <-ptsim(pol2crt(c(preds['radest',pp],phi)),...); 
+      ppcoords <- backtrans(pol2crt(c(ptrfd['radest',pp],phi))+refcoords);
+      ppdat <-ptsim(ppcoords,...); 
       # TODO: not sure we actually needs to explicitly specify index, they seem
       # to be properly handling it anyway
       pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
