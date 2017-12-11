@@ -319,7 +319,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
     for(ii in 1:nrads){
       iicoords <- c(list_radii[[cycle]][ii],phi);
       # TODO: pre-calculate lcoords, lvars, and refcoords and pass to ptsim
-      iidat <- ptsim(pol2crt(iicoords));
+      iidat <- ptsim(pol2crt(iicoords),...);
       list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
       #if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
@@ -362,7 +362,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph
   if(lims['status']==1){
     cat('Success: ');
     for(pp in pnfit) {
-      ppdat <-ptsim(pol2crt(c(preds['radest',pp],phi))); 
+      ppdat <-ptsim(pol2crt(c(preds['radest',pp],phi)),...); 
       # TODO: not sure we actually needs to explicitly specify index, they seem
       # to be properly handling it anyway
       pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
@@ -434,10 +434,14 @@ powertrip<-function(logenv=logenv
   pninfo <- names(pneval_)[!pneval_];
   phicycle <- 1; 
   while(phicycle < maxphicycle){
-    phis <- make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
-                      ,nphis = nphis,numse = numse);
-    #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
-    actualpoints <- nrow(phis);
+    actualpoints <- 0; phis <- c();
+    while(actualpoints < 30){
+      phis <- rbind(phis,make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
+                      ,nphis = nphis,numse = numse));
+      phis <- subset(phis,maxrad>0);
+      #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
+      actualpoints <- nrow(phis);
+      }
     for(ii in seq_len(actualpoints)){
       cat(phicycle,'\t',ii,'\t');
       phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
