@@ -294,7 +294,7 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   # by the panel
   # determines which panels failed on latest round 
   #notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
-  notfailed <- preds['conv',]==1 & preds['radest'] < limit;
+  notfailed <- preds['conv',]==1 & preds['radest',] < limit;
   # determines which panels not yet finished::
   #     sepred*setol > tol  | min < 0 | max > limits
   notdone <- preds['respse',] > tol;
@@ -379,6 +379,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   # for debugging
   phi_radius_env <- environment();
   on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
+  first_fail <- first_success <- T;
   # end debugging 
 
   # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
@@ -435,6 +436,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     #       internally anyway. Makes it easier to find fraction NA too (above TODO)
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
     if(file.exists(savetrigger)) {
+      print('  Saving. ');
       save(phi_radius_env,logenv,file=savefile);
       file.remove(savetrigger);
     }
@@ -442,12 +444,14 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       browser();
     }
     if(file.exists(sourcepatch)) {
+      print('  Patching  ');
       source(sourcepatch,local = T);
       file.rename(sourcepatch,paste0(sourcepatch,'.bak'));
     }
   };
   if(lims['status']==1){
     cat('Success: ');
+    if(first_success){first_success<-F; browser();}
     for(pp in pnfit[preds['conv',]==1]) {
       ppcoords <- backtrans(pol2crt(c(preds['radest',pp],phi)));
       ppdat <-ptsim(ppcoords,refcoords=btrefcoords,...); 
@@ -459,7 +463,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
     pnlph(ppdat,preds['radest',],logenv=logenv,time=Sys.time()-t0);
-  } else cat('Failure: ');
+  } else {cat('Failure: ');    if(first_fail){first_fail<-F; browser();}}
   cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
