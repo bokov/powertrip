@@ -199,12 +199,7 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.
          ,needsdata={fresh<-T}
          ,needsinit={env_fitinit(logenv)}
          ,needsupdate={env_fitupdt(logenv)});
-  if(!fresh) {
-    phinames<-logenv$fits$phinames;
-    nphis<-length(phinames);
-  } else {
-    phinames <- paste0(phiprefix,seq_len(nphis));
-  }
+  nphis<-length(phinames <- logenv$names$phinames);
   oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
   colnames(oo) <- paste0(phiprefix,seq_len(nphis));
   maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
@@ -288,8 +283,10 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   # takes the result of iterating res_preds() over each column of tfresps returned
   # by the panel
   # determines which panels failed on latest round 
-  #notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
-  notfailed <- preds['conv',]==1 & preds['radest',] < limit;
+  # even one the log scale negative values should still be disallowed, so 
+  # uncommenting the next line and dcommenting out the one I had for a while
+  notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
+  #notfailed <- preds['conv',]==1 & preds['radest',] < limit;
   # determines which panels not yet finished::
   #     sepred*setol > tol  | min < 0 | max > limits
   notdone <- preds['respse',] > tol;
@@ -376,7 +373,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   # for debugging
   phi_radius_env <- environment();
   on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
-  first_fail <- first_success <- T;
+  #first_fail <- first_success <- T;
   # end debugging 
 
   # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
@@ -449,7 +446,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   pnlph(ppdat,preds['radest',],logenv=logenv,time=Sys.time()-t0);
   if(lims['status']==1){
     cat('Success: ');
-    if(first_success){first_success<-F; browser();}
+    #if(first_success){first_success<-F; browser();}
     #for(pp in pnfit[preds['conv',]==1]) {
     # it's not enough to test for convergence-- we have to also make sure the 
     # converged results fall within the limits. Not and-ing the below with the
@@ -465,7 +462,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # we need to iterate over all the summary-only non-verdict functions for each of these datasets
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
-  } else {cat('Failure: ');    if(first_fail){first_fail<-F; browser();}}
+  } else cat('Failure: ');    #if(first_fail){first_fail<-F; browser();}}
   cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
