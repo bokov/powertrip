@@ -212,7 +212,7 @@ ptpnl_lm <- new.ptpnl("lm"
 ptpnl_sr <- new.ptpnl('sr'
                       ,fit=survreg(formula=frm,data)
                       ,result = list(model=broom::glance(fit),detect=eval(eval.))
-                      ,eval= summary(fit)$table[matchterm,'p']<psig
+                      ,eval.= summary(fit)$table[matchterm,'p']<psig
                       # should also be able to handle Surv(yy,cc)~.
                       ,frm=Surv(yy)~.,psig=0.05
                       ,matchterm='grouptreated');
@@ -220,10 +220,18 @@ ptpnl_sr <- new.ptpnl('sr'
 ptpnl_cx <- new.ptpnl('cx'
                       ,fit=coxph(formula=frm,data)
                       ,result = list(model=broom::glance(fit),detect=eval(eval.))
-                      ,eval= summary(fit)$coef[matchterm,'Pr(>|z|)']<psig
+                      ,eval.= summary(fit)$coef[matchterm,'Pr(>|z|)']<psig
                       # should also be able to handle Surv(yy,cc)~.
                       ,frm=Surv(yy)~group,psig=0.05
                       ,matchterm='grouptreated');
+
+ptpnl_gm <- new.ptpnl('gm'
+                      ,fit = list(h0=opsurv(x=data$yy[data$group==matchterm],y=data$yy[data$group!=matchterm],model='gm',cons=c(0,0,0,0))
+                                ,h1=opsurv(x=data$yy[data$group==matchterm],y=data$yy[data$group!=matchterm],model='gm'))
+                      ,result = list(model=fit, detect=eval(eval.))
+                      ,eval.= pchisq(2 * (fit$h1$maximum - fit$h0$maximum), df = 3,lower.tail = F) < psig
+                      ,frm=Surv(yy)~group,psig=0.05
+                      ,matchterm='control');
 
 #' coxph
 #' The following work (after running the ptsim_nlin example near top of script):

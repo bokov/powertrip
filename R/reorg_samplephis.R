@@ -554,11 +554,12 @@ powertrip<-function(logenv=logenv,refcoords
       phis <- rbind(phis,make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
                       ,nphis = nphis,numse = numse));
       phis <- subset(phis,maxrad>0);
+      if(!is(phis,'data.frame')||nrow(phis)<1||nrow(subset(baz,maxs<0|mins<0|mins>=maxs|maxs>maxrad))>0) {print('Jacked phis created!');browser();}
       #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
       actualpoints <- nrow(phis);
     }
     # DEBUG BREAK
-    debugonce(make_phis);
+    #debugonce(make_phis);
     for(ii in seq_len(actualpoints)){
       cat(phicycle,'\t',ii,'\t');
       phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
