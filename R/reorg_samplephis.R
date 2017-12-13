@@ -576,7 +576,7 @@ powertrip<-function(logenv=logenv,refcoords
                  ,sourcepatch=sourcepatch
                  ,phicycle=phicycle,...);
     }
-    if(phicycle==1) browser();
+    #if(phicycle==1) browser();
     phicycle<-phicycle+1
   }
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
