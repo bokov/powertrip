@@ -198,7 +198,9 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   # bestfrac is the quantile (of the filtering criterion) above which to keep 
   # the candidate phis... in order to target the most informative and least
   # computationally expensive parts of the current parameter space
-  if((nphis<-length(phinames<-logenv$names$phinames))==0||is.null(snames<-logenv$names$snames)||is.null(fnames<-logenv$names$fnames)){
+  if((nphis<-length(phinames<-logenv$names$phinames))==0||
+     is.null(snames<-logenv$names$snames)||
+     is.null(fnames<-logenv$names$fnames)){
     stop('logenv must contain valid phinames, snames, and fnames vectors inside its names list so we know which columns to use');
   }
   switch(env_state(logenv,...)
@@ -207,9 +209,10 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
          ,needsupdate={print('Updating logenv$fits');env_fitupdt(logenv)});
   #nphis<-length(phinames <- logenv$names$phinames);
   oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
-  colnames(oo) <- paste0(phiprefix,seq_len(nphis));
+  colnames(oo) <- phinames; #paste0(phiprefix,seq_len(nphis));
   maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
+    #browser();
     fp <- env_fitpred(logenv,newdata = oo,maxrad = maxrad);
     #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
     if(bestfrac<1){
@@ -554,7 +557,7 @@ powertrip<-function(logenv=logenv,refcoords
       phis <- rbind(phis,make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
                       ,nphis = nphis,numse = numse));
       phis <- subset(phis,maxrad>0);
-      if(!is(phis,'data.frame')||nrow(phis)<1||nrow(subset(baz,maxs<0|mins<0|mins>=maxs|maxs>maxrad))>0) {print('Jacked phis created!');browser();}
+      if(!is(phis,'data.frame')||nrow(phis)<1||nrow(subset(phis,maxs<0|mins<0|mins>=maxs|maxs>maxrad))>0) {print('Jacked phis created!');browser();}
       #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
       actualpoints <- nrow(phis);
     }
