@@ -202,9 +202,9 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
     stop('logenv must contain valid phinames, snames, and fnames vectors inside its names list so we know which columns to use');
   }
   switch(env_state(logenv,...)
-         ,needsdata={fresh<-T}
-         ,needsinit={env_fitinit(logenv)}
-         ,needsupdate={env_fitupdt(logenv)});
+         ,needsdata={print('Need to accumulate data pre initialization.');fresh<-T}
+         ,needsinit={print('Initializing logenv$fits.');env_fitinit(logenv)}
+         ,needsupdate={print('Updating logenv$fits');env_fitupdt(logenv)});
   #nphis<-length(phinames <- logenv$names$phinames);
   oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
   colnames(oo) <- paste0(phiprefix,seq_len(nphis));
