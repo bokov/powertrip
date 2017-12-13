@@ -88,34 +88,29 @@ v2mat <- function(vv,nr) matrix(as.matrix(vv),nrow=nr,ncol=length(vv),byrow=T,di
 #' env_fitupdt()
 #
 
-env_fitinit <- function(logenv
-                        ,fields=alist(rad=ifelse(preds['conv',]==1,preds['radest',],NA)
-                                      ,phi=unname(phi)
-                                      #,convs=sum(preds['conv',])
-                                      ,nsims=nsims)
-                        #,pathtop='fits'
-                        ,...){
-  if(length(intersect(c('rad','phi','nsims'),names(fields)))<3){
-    stop("The fields argument must be an alist that includes 'rad','phi',and 'nsims' among its elements, see 'args(env_fitinit)'");
-  };
-  logenv$fits$fields <- fields;
+env_fitinit <- function(logenv,...){
+  #if(length(intersect(c('rad','phi','nsims'),names(fields)))<3){
+  #  stop("The fields argument must be an alist that includes 'rad','phi',and 'nsims' among its elements, see 'args(env_fitinit)'");
+  #};
+  #logenv$fits$fields <- fields <- alist(rad=ifelse());
   #if(!pathtop %in% names(logenv)) logenv[[pathtop]] <- list();
   # hardcoding pathtop in hopes of making functions less brittle
+  if(!all(c('phinames','notfailed','fields','radnames') %in% names(logenv$names))) stop('The environment passed through the logenv variable needs to have its names initialized');
   if(!'fits' %in% names(logenv)) logenv$fits <- list();
   # obtain the updated data we will need
-  logenv$fits$radsphis <- pt2df(ptenv=logenv,fields=fields,...);
+  logenv$fits$radsphis <- pt2df(ptenv=logenv,fields=logenv$names$fields);
   # here is why we needed rads, phis, and nsims...
   with(logenv$fits,{
-    logenv$fits$radnames <- radnames <- grep('^rad\\.',names(radsphis),val=T);
-    logenv$fits$phinames <- phinames <- grep("^phi[0-9]+$",names(logenv$fits$radsphis),val=T);
+    #logenv$fits$radnames <- radnames <- grep('^rad\\.',names(radsphis),val=T);
+    #logenv$fits$phinames <- phinames <- grep("^phi[0-9]+$",names(logenv$fits$radsphis),val=T);
     # formula for modeling number of simulations needed to converge as a function 
     # of angle. This will get updated to create all the formulas for predicting
     # the radii for the respective ptpnl_ functions
     nsimsfrm<-update(as.formula(paste('nsims~('
-                                      ,paste0(sprintf('%1$s+cos(%1$s)+sin(%1$s)',phinames)
+                                      ,paste0(sprintf('%1$s+cos(%1$s)+sin(%1$s)',logenv$names$phinames)
                                               ,collapse='+'),')^2')),.~.);
     logenv$fits$frms <- frms <- c(nsims=nsimsfrm
-                                ,sapply(radnames
+                                ,sapply(logenv$names$radnames
                                         ,function(xx) update(nsimsfrm
                                                              ,as.formula(paste0(xx,'~.')))));
   logenv$fits$models <- sapply(frms,function(xx) {
@@ -126,7 +121,7 @@ env_fitinit <- function(logenv
 
 #' To run each time a new set of phis has been completed
 env_fitupdt <- function(logenv,...){
-  logenv$fits$radsphis <- pt2df(ptenv = logenv,fields=logenv$fits$fields,...);
+  logenv$fits$radsphis <- pt2df(ptenv = logenv,fields=logenv$names$fields,...);
   logenv$fits$models <- sapply(logenv$fits$models,update,data=logenv$fits$radsphis,simplify=F);
 };
 
@@ -304,7 +299,9 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   # if there are any non-failed non-converged panels
   # returns a single max and min for the next round of radii based on those
   #pnstatus <- 
-  if(status<-!any(select <- notfailed & notdone)) select <- notfailed;
+  status<-try(!any(select <- notfailed & notdone));
+  if(is(status,'try-error')) browser();
+  if(status) select <- notfailed;
   return(c(
      min=max(min(preds['radest',select] - preds['radse',select]*numse),0) # used to be 0
     ,max=min(max(preds['radest',select] + preds['radse',select]*numse),limit)
@@ -427,11 +424,11 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     #       verdicts and also disqualify. Perhaps within the panel function
     # TODO: this may run too long-- set a cycle-limit exceeding which would also 
     #       end the attempt to estimate the radius for these phis
-    # TODO: implement logging at the phi level-- don't retain model results or 
+    # DONE: implement logging at the phi level-- don't retain model results or 
     #       stats about the current simulated dataset, just the global part of 
     #       ptpnl_summary especially the phi
     # TODO: implement error logging for ptpnl_ functions
-    # TODO: in normal result logging for ptpnl_ functions retain the verdict as well
+    # DONE: in normal result logging for ptpnl_ functions retain the verdict as well
     # DONE: consider not bothering with na.omit since glm probably does it
     #       internally anyway. Makes it easier to find fraction NA too (above TODO)
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
@@ -449,10 +446,16 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       file.rename(sourcepatch,paste0(sourcepatch,'.bak'));
     }
   };
+  pnlph(ppdat,preds['radest',],logenv=logenv,time=Sys.time()-t0);
   if(lims['status']==1){
     cat('Success: ');
     if(first_success){first_success<-F; browser();}
-    for(pp in pnfit[preds['conv',]==1]) {
+    #for(pp in pnfit[preds['conv',]==1]) {
+    # it's not enough to test for convergence-- we have to also make sure the 
+    # converged results fall within the limits. Not and-ing the below with the
+    # convergence criteria because IIRC for us to even get this far, they both
+    # have to have converged
+    for(pp in pnfit[lims[paste0('notfailed.',pnfit)]==1]) {
       ppcoords <- backtrans(pol2crt(c(preds['radest',pp],phi)));
       ppdat <-ptsim(ppcoords,refcoords=btrefcoords,...); 
       # TODO: not sure we actually needs to explicitly specify index, they seem
@@ -462,7 +465,6 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # we need to iterate over all the summary-only non-verdict functions for each of these datasets
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
-    pnlph(ppdat,preds['radest',],logenv=logenv,time=Sys.time()-t0);
   } else {cat('Failure: ');    if(first_fail){first_fail<-F; browser();}}
   cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
@@ -473,7 +475,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   #       and exclude them
   # DONE?: figure out why negative radii are being allowed and fix
   # DONE?: figure out why plots look so wierd... is pol2crt wrong?
-  # TODO: finalize outer function
+  # DONE: finalize outer function
   # DONE?: launch the linear model version
   # TODO: try to resurrect simsurve and survwrapper
 }
@@ -522,8 +524,22 @@ powertrip<-function(logenv=logenv,refcoords
   #browser();
   #phis <- as.matrix(do.call(expand.grid,c(replicate(nphi-1,phiseq,simplify=F),list(sample(seq(0,2*pi,length.out = npoints),npoints,rep=F)))));
   pneval_ <- sapply(pnlst,attr,'eval');
-  pnfit <- names(pneval_)[pneval_];
-  pninfo <- names(pneval_)[!pneval_];
+  # maybe this is a good place to initialize logenv for use everywhere else in powertrip
+  # so we don't have to keep deriving names in multiple places or passing around too many arguments
+  # TODO: consider this being a function with access to its calling environment?
+  # names of the functions in pnlist that each return a TRUE/FALSE verdict
+  logenv$names$pnfit <- pnfit <- names(pneval_)[pneval_];
+  # names of the other functions in pnlist that produce summary statistics for each simulated population
+  logenv$names$pninfo <- pninfo <- names(pneval_)[!pneval_];
+  # names of the columns that hold the predicted lengths of radii for each pnfit function, for pt2df
+  logenv$names$radnames <- paste0('rad.',logenv$names$pnfit);
+  # names of the phi columns, for pt2df
+  logenv$names$phinames <- paste0('phi',seq_len(nphis));
+  # names of the notfailed elements in the lims vector, for subsetting which rads to report
+  logenv$names$notfailed <- paste0('notfailed.',logenv$names$pnfit);
+  # alist to be used in the fields argument of pt2df as invoked within env_fitinit()
+  logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]==T,preds['radest',],NA),ptenv$names$radnames),setNames(phi,ptenv$names$phinames),nsims=nsims);
+  
   phicycle <- 1; 
   while(phicycle < maxphicycle){
     actualpoints <- 0; phis <- c();

@@ -152,10 +152,19 @@ ptpnl_phisumm <- new.ptpnl('summ'
                            ,fit=c()
                            #,fit = split(data.frame(data),data.frame(data)[,1])
                            ,time=quote(Sys.time())
-                           ,literals=c('coords','cycle','phi','preds','lims','maxrad','phicycle')
+                           # only put something in literals if its small enough that you want to keep it in its 
+                           # entirety
+                           ,literals=c('cycle','phi','preds','lims','maxrad','phicycle')
                            ,result = c(sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
-                                       ,nsims=length(callingframe$list_tfresp)
-                                       ,time=time)
+                                       ,list(nsims=length(callingframe$list_tfresp)
+                                       # cbinding to NA so there would consistently always be an NA row,
+                                       # so remember to subtract 1 from this if using
+                                       ,cyclecoords=apply(rbind(callingframe$cyclecoords,NA),2,summary)
+                                       ,cycleradii=summary(callingframe$testrd)
+                                       ,lastsim=summary(rbind(callingframe$iidat,NA))
+                                       # subtract 1 from the first and last fields
+                                       ,testtf=table(interaction(rbind(callingframe$testtf,T,F)))
+                                       ,time=time))
 );
 #' NOTE: avoid creating variables that match the regexp "^phi[0-9]$" because 
 #' env_fitinit() will mistake them for phinames
