@@ -39,26 +39,38 @@ dfcrt <- function(data,radius,phis=c('phi1','phi2')
 };
 
 # required: maxs, mins, if phis missing then 
-make_polgrid <- function(maxs,mins,phis,nticks=10,refcoords=0*maxs
-                         ,nphis=1
+make_polgrid <- function(maxs,mins,phis,nticks=5,refcoords=0*maxs
+                         ,cartesian=T,radticks=0
                          # maxes and mins relative to refcoords
                          ,relmaxs=maxs-refcoords,relmins=mins-refcoords,...){
   # TODO: more error checking
-  if(!missing(phis)) {phis <- cbind(phis); nphis <- ncol(phis)}; 
-  if(length(relmaxs)!=nphis+1||length(relmins)!=nphis+1){
-    if(missing(phis)) stop('Please set the nphis argument to one less than the length of the maxs and mins argument') else {
-      stop('Please provide maxs and mins such that both are one longer than the number of columns in phis')
-    }
-  }
+  if(length(relmaxs)!=length(relmins)) stop('The maxs and mins arguments should be the same length');
+  nphis<-length(relmaxs)-1;
   if(missing(phis)) {
     phiseq <- seq(0,pi,length.out = nticks);
-    phis<-do.call(expand.grid,c(replicate(nphis-1,phiseq,simplify=F),list(seq(0,2*pi,length.out = nticks))));
-  }
-  phis$maxrad <- apply(phis,1,pollim,maxs=relmaxs,mins=relmins);
-  dfcrt(phis,'maxrad',colnames(phis)[seq_len(nphis)],refcoords,...);
+    phis<-do.call(expand.grid,c(replicate(nphis-1,phiseq,simplify=F),list(seq(0,2*pi,length.out = 40*nticks))));
+  } else if(nphis != ncol(phis)) stop('The length of both maxs and mins arguments should equal the number of columns in the phis argument, if used.');
+  phinames <- names(phis);
+  phis$rad <- apply(phis,1,pollim,maxs=relmaxs,mins=relmins);
+  phis$ismax<-1;
+  # for each point on the outer boundaries draw a line from the center that goes to it
+  # and includes radticks points including the center and outer point
+  if(radticks>0){
+    phis<- data.frame(do.call(rbind,lapply(split(phis,phis[,phinames]),function(xx) {
+      oo<-v2mat(xx,radticks);
+      # we oimit the zero point to avoid redundancy
+      oo[,'rad']<-seq(0,oo[1,'rad'],len=radticks+1)[-1];
+      oo[-radticks,'ismax']<-0;
+      oo})));
+    # this gives us the one zero point we need
+    phis <- rbind(phis,0);
+    }
+  if(cartesian) phis <- cbind(phis,dfcrt(phis,'rad',phinames,refcoords,...));
   #dfcrt(data=phis,radius = 'maxrad',phis=colnames(phis),refcoords=refcoords,...)
 }
 
+#' The extra `as.matrix()` is needed here to properly handle data.frames
+v2mat <- function(vv,nr) matrix(as.matrix(vv),nrow=nr,ncol=length(vv),byrow=T,dimnames=list(NULL,colnames(vv)));
 #' Set up lm fits and predictions in logenv to subsequently update
 #' Note: this function intentionally blows away anything already in
 #' logenv[[pathtop]] that may have the same name. For updates, use
