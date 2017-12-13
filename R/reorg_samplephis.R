@@ -134,14 +134,17 @@ env_fitpred <- function(logenv,newdata
                         ,example=F
                         ,maxrad=NULL
                         ,...){
-  if(example) return(summary(logenv$fits$radsphis[,logenv$fits$phinames]));
-  if(missing(newdata)) newdata <- logenv$fits$radsphis[,logenv$fits$phinames];
+  if(is.null(phinames<-logenv$names$phinames)||is.null(snames<-logenv$names$snames)||is.null(fnames<-logenv$names$fnames)){
+    stop('logenv must contain valid phinames, snames, and fnames vectors inside its names list so we know which columns to use');
+  }
+  if(example) return(summary(logenv$fits$radsphis[,phinames]));
+  if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
   oo<-do.call(data.frame,sapply(logenv$fits$models
                             ,function(xx) with(predict(xx,newdata=newdata,se=T)
                                                ,cbind(fit=fit,se=se.fit)),simplify=F));
   if(!is.null(maxrad)){
-    fnames<-paste0(logenv$fits$radnames,'.fit');
-    snames<-paste0(logenv$fits$radnames,'.se');
+    #fnames<-paste0(logenv$fits$radnames,'.fit');
+    #snames<-paste0(logenv$fits$radnames,'.se');
     #ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrad);
     ex <- apply(oo[,fnames,drop=F],2,function(xx) xx>maxrad);
     oo[fnames][ex] <- NA;
@@ -186,7 +189,7 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
 #' 
 #' Definitely looks like setting limits such that they actually get encountered
 #' causes a lot of failures
-make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.5,numse=2,fresh=F,...){
+make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,numse=2,fresh=F,...){
   # Note: do not change phi prefix without also changing the fields argument of
   # pt2df() or the generation of subsequent rounds of phis will break
   # if no data obtained yet or fresh manually set to T then phiprefix and nphis
@@ -195,18 +198,20 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.
   # bestfrac is the quantile (of the filtering criterion) above which to keep 
   # the candidate phis... in order to target the most informative and least
   # computationally expensive parts of the current parameter space
+  if((nphis<-length(phinames<-logenv$names$phinames))==0||is.null(snames<-logenv$names$snames)||is.null(fnames<-logenv$names$fnames)){
+    stop('logenv must contain valid phinames, snames, and fnames vectors inside its names list so we know which columns to use');
+  }
   switch(env_state(logenv,...)
          ,needsdata={fresh<-T}
          ,needsinit={env_fitinit(logenv)}
          ,needsupdate={env_fitupdt(logenv)});
-  nphis<-length(phinames <- logenv$names$phinames);
+  #nphis<-length(phinames <- logenv$names$phinames);
   oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
   colnames(oo) <- paste0(phiprefix,seq_len(nphis));
   maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
     fp <- env_fitpred(logenv,newdata = oo,maxrad = maxrad);
-    snames <- paste0(logenv$fits$radnames,'.se');
-    fnames <- paste0(logenv$fits$radnames,'.fit');
+    #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
     if(bestfrac<1){
       filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T)/fp$nsims.fit;
       filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
@@ -222,10 +227,12 @@ make_phis <- function(logenv,npoints,maxs,mins,nphis,phiprefix='phi',bestfrac=0.
     # predictions getting added back in. That's okay, if they are NA they are 
     # meaningless anyway, so replacing NAs with 0s or maxrad values
     #oo$mins <- pmax(apply(fp[fnames]-numse*fp[snames],1,min,na.rm=T),0);
-    oo$mins <- apply(fp[,fnames,drop=F]-numse*fp[,snames,drop=F],1,min,na.rm=T);
+    oo$mins <- pmax(apply(fp[,fnames,drop=F]-numse*fp[,snames,drop=F],1,min,na.rm=T),0);
     oo$mins[is.infinite(oo$mins)]<- 0; #0; TODO: properly handle this case instead of hardcoded value which will break for non-log cases
-    oo$maxs <- pmin(apply(fp[fnames]+numse*fp[snames],1,max,na.rm=T),maxrad);
-    oo$maxs[is.infinite(oo$maxs)]<-maxrad[is.infinite(oo$maxs)];
+    oo$maxs <- pmin(apply(fp[,fnames,drop=F]+numse*fp[,snames,drop=F],1,max,na.rm=T),maxrad);
+    # TODO: catch the maxs<0 case further upstream
+    badmaxs<-oo$maxs<=0|is.infinite(oo$maxs);
+    oo$maxs[badmaxs]<-maxrad[badmaxs];
   } else {oo$mins <- 0; oo$maxs <- maxrad};
   cbind(oo,maxrad);
 }
@@ -530,6 +537,9 @@ powertrip<-function(logenv=logenv,refcoords
   logenv$names$pninfo <- pninfo <- names(pneval_)[!pneval_];
   # names of the columns that hold the predicted lengths of radii for each pnfit function, for pt2df
   logenv$names$radnames <- paste0('rad.',logenv$names$pnfit);
+  # names that make_phis will use for radius lengths and their SEs, respectively
+  logenv$names$fnames<-paste0(logenv$names$radnames,'.fit');
+  logenv$names$snames<-paste0(logenv$names$radnames,'.se');
   # names of the phi columns, for pt2df
   logenv$names$phinames <- paste0('phi',seq_len(nphis));
   # names of the notfailed elements in the lims vector, for subsetting which rads to report
@@ -546,7 +556,9 @@ powertrip<-function(logenv=logenv,refcoords
       phis <- subset(phis,maxrad>0);
       #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
       actualpoints <- nrow(phis);
-      }
+    }
+    # DEBUG BREAK
+    debugonce(make_phis);
     for(ii in seq_len(actualpoints)){
       cat(phicycle,'\t',ii,'\t');
       phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
