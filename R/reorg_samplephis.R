@@ -69,8 +69,19 @@ make_polgrid <- function(maxs,mins,phis,nticks=5,refcoords=0*maxs
   #dfcrt(data=phis,radius = 'maxrad',phis=colnames(phis),refcoords=refcoords,...)
 }
 
+#' makena takes a prefectly good object and ruins it by recursively turning everything
+#' in it into an NA! Why would anybody want to do that? Well one reason might be
+#' to create placeholder objects to return when an error is encountered that prevents
+#' the correct response from being generated-- placeholders with, as far as I can
+#' tell at this time, identical dimensions, sub-objects, names, everything.
+makena <- function(xx,fn){if(missing(fn)) fn<-sys.function(); if(is.list(xx)) xx[]<-lapply(xx,fn,fn=fn) else is.na(xx)<-T; xx}
+
+#' v2mat() stacks a vector on itself to make a matrix with the same number of 
+#' columns as the length of the vector and nr rows. Because for some reason I
+#' keep having to create matrices like that for this project
 #' The extra `as.matrix()` is needed here to properly handle data.frames
 v2mat <- function(vv,nr) matrix(as.matrix(vv),nrow=nr,ncol=length(vv),byrow=T,dimnames=list(NULL,colnames(vv)));
+
 #' Set up lm fits and predictions in logenv to subsequently update
 #' Note: this function intentionally blows away anything already in
 #' logenv[[pathtop]] that may have the same name. For updates, use
@@ -307,19 +318,44 @@ preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
   # returns a vector of radii
 #}
 
-radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
+#radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
   # using radii as provided by lims_radii() and phis, a vector of angles
   # simulates data at each value of radii and the entire vector of phis using
   # the ptsim() function and iterates over all the functions in pnlst()
   # returns a data structure which for each value of radii has the verdict returned
   # by each function of pnlst() (T/F)
-}
+#}
 
 #testenv <- new.env();
 #load('data/testdata.rda',envir = testenv);
 
+#' A function to take a series of pre-generated coordinates, do simulations, and 
+#' run the panel on each one. This is different from phi_radius, below, because 
+#' that function operates on set of phis at a time, generates its own radii, and
+#' keeps cycling until it either converges on optimal radii or experiences a
+#' decisive failure. Also unlike phi_radius(), the coordinates are expected to
+#' already be on cartesian scale
+#' 
+#' The purpose of powergrid() at the moment is to experiment with various coordinate
+#' sampling algorithms and maxs/mins settings, etc. in order to find a region in
+#' the parameter space where the ptpnl_ and ptsim functions at least work at all
+#' before embarking on the harder task of finding optima
+powergrid <- function(coords,refcoords,ptsim,pnlst
+                      ,phicols,cartcols
+                      ,pneval=sapply(pnlst,attr,which='eval')
+                      ,backtrans=identity,nn=250,logenv=logenv,...){
+  # create coords to pass to ptsim from the CARTESIAN part
+  iis<-seq_len(nrow(btcoords<-backtrans(as.matrix(coords[,cartcols]))));
+  # create philabels from the POLAR part
+  philabels<-paste0('phi_',apply(round(coords[,phicols],3),1,paste0,collapse='_'));
+  for(ii in iis){
+    iidat <- ptsim(btcoords[ii,],nn=nn,refcoords=refcoords,...);
+    sapply(pnlst[pneval],function(xx) any(xx(iidat,btcoords[ii,],logenv,philabel=philabels[ii],...)));
+  }
+};
+
 phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
-                       ,pneval=sapply(pnlst,attr,'eval')
+                       ,pneval=sapply(pnlst,attr,which='eval')
                        ,pnfit=names(pneval)[pneval]
                        ,pninfo=names(pneval)[!pneval]
                        ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
