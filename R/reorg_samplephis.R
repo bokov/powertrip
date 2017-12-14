@@ -219,7 +219,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
     fp <- env_fitpred(logenv,newdata = oo,maxrad = maxrad);
     #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
     if(bestfrac<1){
-      filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T)/fp$nsims.fit;
+      filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T); #/fp$nsims.fit;
       filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
       # in env_fitpred() we turn illegal nsims.fit values (<0) into NAs so need
       # to not make that break the filtering...
@@ -246,7 +246,10 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
 #' Any arguments in ... are treated as expressions to evaluate in the context of
 #' ptenv$coords[[XXX]][[summname]]
 pt2df <- function(ptenv,summname='summ'
-                  ,fields=alist(rad=preds['radest',],phi=unname(phi),conv=preds['conv',],nsims=nsims,time=time,maxrad=maxrad,lims=lims)
+                  ,fields=alist(rad=preds['radest',],phi=unname(phi)
+                                ,conv=preds['conv',],maxrad=maxrad,lims=lims
+                                ,nsims=nsims,time=time
+                                ,cycle=cycle,phicycle=phicycle)
                   ,...){
   dots <- as.list(substitute(list(...))[-1]);
   # to the default fields below add in maxrad=maxrad next time logenv is rebuilt
@@ -385,8 +388,8 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   # jointly
   
   # for debugging
-  phi_radius_env <- environment();
-  on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
+  logenv$state$phi_radius <- environment();
+  #on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
   #first_fail <- first_success <- T;
   # end debugging 
 
@@ -477,7 +480,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
   } else cat('Failure: ');    #if(first_fail){first_fail<-F; browser();}}
-  cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
+  if(isTRUE(logenv$state$powertrip$console_log)) cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
   # DONE: for prioritizing phis, also model the runtime to get most uncertainty
@@ -502,32 +505,33 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
 #' meaning that is multiplies runtimes 14.3-fold!
 
 powertrip<-function(logenv=logenv,refcoords
-                       #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
-                       ,maxs=c(20,20,20),mins=c(-20,-20,-20)
-                       ,npoints=50,nphis=2,nrads=20,numse=2
-                       # which fraction of the most impactful phis should we 
-                       # model each time?
-                       ,wd=paste0(getwd(),'/'),savetrigger=paste0(wd,'pt_savedata')
-                       ,debugtrigger=paste0(wd,'pt_debug')
-                       ,savefile=paste0(wd,'pt_result.rdata')
-                       ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
-                       ,bestfrac = 0.5
-                       # these run at the level of each radius
-                       ,pnlst=list(#lm=ptpnl_lm
+                    #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
+                    ,maxs=c(20,20,20),mins=c(-20,-20,-20)
+                    ,npoints=50,nphis=2,nrads=20,numse=2
+                    # which fraction of the most impactful phis should we
+                    # model each time?
+                    ,wd=paste0(getwd(),'/'),savetrigger=paste0(wd,'pt_savedata')
+                    ,debugtrigger=paste0(wd,'pt_debug')
+                    ,savefile=paste0(wd,'pt_result.rdata')
+                    ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
+                    ,topsourcepatch=paste0(wd,'pt_top_sourcepatch.R')
+                    ,bestfrac = 0.5
+                    # these run at the level of each radius
+                    ,pnlst=list(#lm=ptpnl_lm
                                    lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group)
                                    ,tt=ptpnl_tt
                                    ,wx=ptpnl_wx
                                    ,simsm=ptpnl_simsumm)
-                       # this runs on each set of phis
-                       ,pnlph=ptpnl_phisumm
-                       ,ptsim=ptsim_nlin
-                       # technically this can run forever continuously generating
-                       # better predictions and get stopped from an external R
-                       # session via ptmg()... but it feels wrong to not install
-                       # an automatic off-switch, so we will have maxphicycle
-                       # if we do need literally indefinite runtime just set 
-                       # this to Inf
-                       ,maxphicycle=1e6,...){
+                    # this runs on each set of phis
+                    ,pnlph=ptpnl_phisumm
+                    ,ptsim=ptsim_nlin
+                    # technically this can run forever continuously generating
+                    # better predictions and get stopped from an external R
+                    # session via ptmg()... but it feels wrong to not install
+                    # an automatic off-switch, so we will have maxphicycle
+                    # if we do need literally indefinite runtime just set 
+                    # this to Inf
+                    ,maxphicycle=1e6,...){
   #phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
   # trying more regularly spaced phis, to get a handle on the weird output
   # 10 intervals per phi results in 10,000 distinct points
@@ -553,9 +557,21 @@ powertrip<-function(logenv=logenv,refcoords
   logenv$names$notfailed <- paste0('notfailed.',logenv$names$pnfit);
   # alist to be used in the fields argument of pt2df as invoked within env_fitinit()
   logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]==T,preds['radest',],NA),ptenv$names$radnames),setNames(phi,ptenv$names$phinames),nsims=nsims);
-  
-  phicycle <- 1; 
+
+  # The below is a catch-all way to do runtime patches to most arguments
+  logenv$state$powertrip <- environment();
+  console_log <- T;
+  # Increment phicycle from previous run by 1 if it exists, otherwise start with 1
+  phicycle <- c(logenv$state$phicycle,0)[1]+1;
+  # export final phicycle when exiting
+  on.exit(logenv$state$phicycle<-phicycle);
+
   while(phicycle < maxphicycle){
+    if(file.exists(topsourcepatch)) {
+      print('  Patching Top Level ');
+      source(topsourcepatch,local = T);
+      file.rename(topsourcepatch,paste0(topsourcepatch,'.bak'));
+    }
     actualpoints <- 0; phis <- c();
     while(actualpoints < 30){
       phis <- rbind(phis,make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
@@ -568,7 +584,7 @@ powertrip<-function(logenv=logenv,refcoords
     # DEBUG BREAK
     #debugonce(make_phis);
     for(ii in seq_len(actualpoints)){
-      cat(phicycle,'\t',ii,'\t');
+      if(console_log) cat(phicycle,'\t',ii,'\t');
       phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
                  ,refcoords = refcoords
                  ,pnlph=ptpnl_phisumm
@@ -589,6 +605,6 @@ powertrip<-function(logenv=logenv,refcoords
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
     phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)
     ,time=time,nsims=nsims,cycle=cycle)))));
-  browser();
+  #browser();
 };
 # Timing stopped at: 6573 5411 6740 ... about 1.87 hours to try 1000 pairs of phis
