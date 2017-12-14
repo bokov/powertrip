@@ -209,6 +209,9 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
          ,needsupdate={print('Updating logenv$fits');env_fitupdt(logenv)});
   #nphis<-length(phinames <- logenv$names$phinames);
   oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
+  # I wonder if having the first dimension be the 0-2pi one will improve coverage? Or maybe blow things up again 
+  # and waste valuable time, save for later
+  #oo<-data.frame(runif(npoints,0,2*pi),matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints));
   colnames(oo) <- phinames; #paste0(phiprefix,seq_len(nphis));
   maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
@@ -289,7 +292,8 @@ resp_preds <- function(tfresp,radii,power=0.8,narate=0.5){
 #' number of columns as the length of radii, res_preds() should iterate over each
 #' column
 
-preds_lims <- function(preds,tol=0.01,limit=1e6,numse=2,...){
+# used to have tol at 0.01
+preds_lims <- function(preds,tol=1,limit=1e6,numse=2,...){
   # takes the result of iterating res_preds() over each column of tfresps returned
   # by the panel
   # determines which panels failed on latest round 
