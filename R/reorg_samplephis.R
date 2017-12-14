@@ -208,10 +208,10 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
          ,needsinit={print('Initializing logenv$fits.');env_fitinit(logenv)}
          ,needsupdate={print('Updating logenv$fits');env_fitupdt(logenv)});
   #nphis<-length(phinames <- logenv$names$phinames);
-  oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
+  #oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
   # I wonder if having the first dimension be the 0-2pi one will improve coverage? Or maybe blow things up again 
   # and waste valuable time, save for later
-  #oo<-data.frame(runif(npoints,0,2*pi),matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints));
+  oo<-data.frame(runif(npoints,0,2*pi),matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints));
   colnames(oo) <- phinames; #paste0(phiprefix,seq_len(nphis));
   maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
@@ -412,7 +412,8 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     cyclecoords <- backtrans(
       pol2crt(cbind(
         # save untransformed randomly generated radians for later
-        list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])
+        # if we sample a root of a runif, less biased toward small distances
+        list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])^0.75
         # turn the static coordinate vector into matrix with one column for each
         # phi and nrads rows
         ,rbind(phi)[rep_len(1,nrads),])));
@@ -448,7 +449,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
     if(file.exists(savetrigger)) {
       print('  Saving. ');
-      save(phi_radius_env,logenv,file=savefile);
+      save(logenv,file=savefile);
       file.remove(savetrigger);
     }
     if(file.exists(debugtrigger)){
