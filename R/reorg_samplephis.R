@@ -35,6 +35,7 @@ dfcrt <- function(data,radius,phis=c('phi1','phi2')
     if(length(refcoords)==1) refcoords <- rep_len(refcoords,length(phis)+1);
     oo <- oo + rbind(refcoords)[rep_len(1L,nrow(oo)),]
   }
+  oo[is.infinite(as.matrix(oo))]<-NA;
   invisible(transform(oo));
 };
 
