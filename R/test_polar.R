@@ -35,7 +35,7 @@ gen_binom<-function(xx,yy){
 ## convert cartesian to polar coordinates
 ## (why isn't this part of base R?!)
 ## returns a matrix of same dimension
-crt2pol <- function(xx,center=kmeans(xx,1)$centers,sort=c('angle','radius','none')){
+crt2pol.old <- function(xx,center=kmeans(xx,1)$centers,sort=c('angle','radius','none')){
   ## xx = cartesian coordinates matrix [x,y]
   ## center = the center relative to which the polar coordinates will be returned
   ## sort = how/whether to sort the coordinates
@@ -58,6 +58,29 @@ crt2pol <- function(xx,center=kmeans(xx,1)$centers,sort=c('angle','radius','none
                none=oo);
   oo;
 }
+
+crt2pol<-function(xx,...) {
+  nx<-ncol(xx); oo1<-t(apply(xx,1,function(zz) 
+    acos(zz/sqrt(rev(cumsum(rev(zz^2)))))))[,-nx]; 
+  oo2<-ifelse(xx[,3]<0,oo1[,nx-1]*-1+2*pi,oo1[,nx-1]);
+  cbind(rad=sqrt(rowSums(xx^2)),phi=cbind(oo1[,-nx+1],oo2))}
+
+# creates cartesian coordinates for a box defined by the maxs and mins, with the
+# points along each face uniformly distributed
+gencartlims<-function(maxs,mins,nn=100,...){
+  lmx<-length(maxs); lmn<-length(mins);
+  if(lmx==1&lmn==1) stop('maxs and mins should be equally sized vectors greater than 1 in lenght');
+  if(lmn!=lmx&&min(c(lmn,lmx))>1) stop('maxs and mins should be the same length');
+  lims <- rbind(maxs,mins); ll<-max(lmn,lmx); lidx <- 1:ll;
+  oo<-lapply(lidx
+             ,function(ii) cbind(rep(lims[,ii],len=nn)
+                                 ,apply(lims[,-ii],2,function(jj) runif(nn,min(jj),max(jj))))[,order(c(ii,lidx[-ii]))]);
+  do.call(rbind,oo);
+}
+
+#' now we can get evenly spaced coords and accompanying maxrads more concisely:
+#crt2pol(gencartlims(lrelmaxs,lrelmins,100))
+#' The above is ready to go with maxrads in the radius column
 
 ## convert polar coordinates back to cartesian
 ## returns a matrix of same dimension

@@ -211,13 +211,15 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   #oo<-data.frame(matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints),runif(npoints,0,2*pi));
   # I wonder if having the first dimension be the 0-2pi one will improve coverage? Or maybe blow things up again 
   # and waste valuable time, save for later
-  oo<-data.frame(runif(npoints,0,2*pi),matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints));
-  colnames(oo) <- phinames; #paste0(phiprefix,seq_len(nphis));
-  maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
+  #oo<-data.frame(runif(npoints,0,2*pi),matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints));
+  oo<-data.frame(crt2pol(gencartlims(maxs,mins,round(npoints/nphis+1))));
+  colnames(oo) <- c('maxrad',phinames); #paste0(phiprefix,seq_len(nphis));
+  #maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
     #browser();
-    fp <- env_fitpred(logenv,newdata = oo,maxrad = maxrad);
+    fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
     #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
+    bestfrac<- Inf #disabling this thing, it might be part of the problem
     if(bestfrac<1){
       filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T); #/fp$nsims.fit;
       filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
@@ -226,7 +228,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
       filterkeep <- filterkeep & !is.na(filterkeep);
       if((addback<-bestfrac*npoints-sum(filterkeep))>0) filterkeep[!filterkeep][seq_len(addback)]<-T;
       oo <- oo[filterkeep,];
-      maxrad <- maxrad[filterkeep];
+      #maxrad <- maxrad[filterkeep];
       fp <- fp[filterkeep,];
     }
     # because of the addback hack above, we now have phis with NA-only radius
@@ -235,12 +237,12 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
     #oo$mins <- pmax(apply(fp[fnames]-numse*fp[snames],1,min,na.rm=T),0);
     oo$mins <- pmax(apply(fp[,fnames,drop=F]-numse*fp[,snames,drop=F],1,min,na.rm=T),0);
     oo$mins[is.infinite(oo$mins)]<- 0; #0; TODO: properly handle this case instead of hardcoded value which will break for non-log cases
-    oo$maxs <- pmin(apply(fp[,fnames,drop=F]+numse*fp[,snames,drop=F],1,max,na.rm=T),maxrad);
+    oo$maxs <- pmin(apply(fp[,fnames,drop=F]+numse*fp[,snames,drop=F],1,max,na.rm=T),oo$maxrad);
     # TODO: catch the maxs<0 case further upstream
     badmaxs<-oo$maxs<=0|is.infinite(oo$maxs);
-    oo$maxs[badmaxs]<-maxrad[badmaxs];
-  } else {oo$mins <- 0; oo$maxs <- maxrad};
-  cbind(oo,maxrad);
+    oo$maxs[badmaxs]<-oo$maxrad[badmaxs];
+  } else {oo$mins <- 0; oo$maxs <- oo$maxrad};
+  oo; #cbind(oo,maxrad);
 }
 
 #' Any arguments in ... are treated as expressions to evaluate in the context of
@@ -548,12 +550,12 @@ powertrip<-function(logenv=logenv,refcoords
   # names of the other functions in pnlist that produce summary statistics for each simulated population
   logenv$names$pninfo <- pninfo <- names(pneval_)[!pneval_];
   # names of the columns that hold the predicted lengths of radii for each pnfit function, for pt2df
-  logenv$names$radnames <- paste0('rad.',logenv$names$pnfit);
+  logenv$names$radnames <- radnames <- paste0('rad.',logenv$names$pnfit);
   # names that make_phis will use for radius lengths and their SEs, respectively
   logenv$names$fnames<-paste0(logenv$names$radnames,'.fit');
   logenv$names$snames<-paste0(logenv$names$radnames,'.se');
   # names of the phi columns, for pt2df
-  logenv$names$phinames <- paste0('phi',seq_len(nphis));
+  logenv$names$phinames <- phinames <- paste0('phi',seq_len(nphis));
   # names of the notfailed elements in the lims vector, for subsetting which rads to report
   logenv$names$notfailed <- paste0('notfailed.',logenv$names$pnfit);
   # alist to be used in the fields argument of pt2df as invoked within env_fitinit()
@@ -586,7 +588,7 @@ powertrip<-function(logenv=logenv,refcoords
     #debugonce(make_phis);
     for(ii in seq_len(actualpoints)){
       if(console_log) cat(phicycle,'\t',ii,'\t');
-      phi_radius(phi=unlist(phis[ii,seq_len(nphis)]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
+      phi_radius(phi=unlist(phis[ii,phinames]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
                  ,refcoords = refcoords
                  ,pnlph=ptpnl_phisumm
                  ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
