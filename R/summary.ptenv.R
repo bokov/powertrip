@@ -35,7 +35,8 @@ read_ptenv<-function(logenv,...){
 print.summary.ptenv<-summary.summary.ptenv<-function(x,...){
   show(list(column_groups=c(colnames(x$maindata),colnames(x$crtcolumns))
             ,named_subsets=colnames(x$subsets)
-            ,last_phicycle=max(x$maindata$phicycle)));
+            ,last_phicycle=max(x$maindata$phicycle)
+            ,points=nrow(x$maindata)));
   #show(x$by_cycle);
   #head(x);
 }
