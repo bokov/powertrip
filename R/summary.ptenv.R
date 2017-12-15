@@ -28,7 +28,7 @@ read_ptenv<-function(logenv,...){
                            ,timeperhit=ttime/hits);
   attr(oo,'call') <- match.call();
   class(oo) <- c('summary.ptenv',class(oo));
-  oo;
+  print(oo); invisible(oo);
   }
 
 

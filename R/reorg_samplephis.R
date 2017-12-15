@@ -484,6 +484,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
   } else cat('Failure: ');    #if(first_fail){first_fail<-F; browser();}}
+  logenv$allpoints[[philabel]] <- data.table(rad=testrd,rbind(phi),testtf);
   if(isTRUE(logenv$state$powertrip$console_log)) cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
