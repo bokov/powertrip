@@ -22,7 +22,7 @@ read_ptenv<-function(logenv,...){
   #ptgm4.0 <- dfcrt(dat4,'rad.gm',subset=lims.notfailed.gm==1);
   #ptgoodbox4 <- dfcrt(dat4,'maxrad',subset=lims.status==1);
   #ptbadbox4 <- dfcrt(dat4,'maxrad',subset=lims.status!=1);
-  oo$by_cycle <- summarize(group_by(dat4,phicycle)
+  oo$by_cycle <- summary(group_by(oo$maindata,phicycle)
                            ,ttime=sum(time),hits=sum(lims.status==1)
                            ,hitrate=mean(lims.status==1),nn=length(time)
                            ,timeperhit=ttime/hits);
