@@ -213,7 +213,9 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   # I wonder if having the first dimension be the 0-2pi one will improve coverage? Or maybe blow things up again 
   # and waste valuable time, save for later
   #oo<-data.frame(runif(npoints,0,2*pi),matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints));
-  oo<-data.frame(crt2pol(gencartlims(maxs,mins,round(npoints/nphis+1))));
+  # changing from uniform cartesian below to normal cartesian let's see...
+  #oo<-data.frame(crt2pol(gencartlims(maxs,mins,round(npoints/nphis+1))));
+  oo <- data.frame(crt2pol(gencartnorm(maxs,mins,npoints)));
   colnames(oo) <- c('maxrad',phinames); #paste0(phiprefix,seq_len(nphis));
   #maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){

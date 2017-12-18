@@ -65,6 +65,16 @@ crt2pol<-function(xx,...) {
   oo2<-ifelse(xx[,3]<0,oo1[,nx-1]*-1+2*pi,oo1[,nx-1]);
   cbind(rad=sqrt(rowSums(xx^2)),phi=cbind(oo1[,-nx+1],oo2))}
 
+# creates an n-dimensional normal distribution (not just surface shell)
+gencartnorm<-function(maxs,mins,nn=100,...){
+  lmx<-length(maxs); lmn<-length(mins);
+  if(lmx==1&lmn==1) stop('maxs and mins should be equally sized vectors greater than 1 in lenght');
+  if(lmn!=lmx&&min(c(lmn,lmx))>1) stop('maxs and mins should be the same length');
+  locscale<- rbind(location=(maxs + mins)/2, scale=(maxs - mins)/2); 
+  ll <- max(lmn,lmx); lidx <- 1:ll;
+  oo <- apply(locscale,2,function(xx) rnorm(nn)*xx[2]+xx[1]);
+}
+
 # creates cartesian coordinates for a box defined by the maxs and mins, with the
 # points along each face uniformly distributed
 gencartlims<-function(maxs,mins,nn=100,...){
