@@ -217,7 +217,8 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   #oo<-data.frame(crt2pol(gencartlims(maxs,mins,round(npoints/nphis+1))));
   oo <- data.frame(crt2pol(gencartnorm(maxs,mins,npoints)));
   colnames(oo) <- c('maxrad',phinames); #paste0(phiprefix,seq_len(nphis));
-  #maxrad<-apply(oo,1,pollim,maxs=maxs,mins=mins); 
+  # temporary note: this was hotpatched on phicycle 46 of local instance
+  oo[,'maxrad'] <- apply(oo[,-1],1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
     #browser();
     fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
