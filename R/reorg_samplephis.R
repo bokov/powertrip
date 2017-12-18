@@ -219,6 +219,9 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   colnames(oo) <- c('maxrad',phinames); #paste0(phiprefix,seq_len(nphis));
   # temporary note: this was hotpatched on phicycle 46 of local instance
   oo[,'maxrad'] <- apply(oo[,-1],1,pollim,maxs=maxs,mins=mins); 
+  # Below hard assignment for fresh to true is temporary, for debugging, trying 
+  # to get rid of the "binoculars"
+  fresh <- T;
   if(!fresh){
     #browser();
     fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
