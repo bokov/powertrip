@@ -140,6 +140,15 @@ env_fitpred <- function(logenv,newdata
   }
   if(example) return(summary(logenv$fits$radsphis[,phinames]));
   if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
+  # TODO: adapt the following Kriging models (if nrow(radsphis) > 2000, sample only
+  # 2000 rows, otherwise use the whole dataset). Krig() introduces a dependency 
+  # on the fields package.
+  # bar1<-mKrig(d2cx[1:2000,phinames],d2cx$rad.cx[1:2000])
+  # TODO: make predictions like this:
+  # fit<-predict(bar1,newdata[,2:3]);
+  # TODO: make prediction SEs like this:
+  # se.fit <- predictSE(bar1,newdat[,2:3]);
+  # TODO: either figure out how to do nsims or comment out or make into an optional feature
   oo<-do.call(data.frame,sapply(logenv$fits$models
                             ,function(xx) with(predict(xx,newdata=newdata,se=T)
                                                ,cbind(fit=fit,se=se.fit)),simplify=F));
@@ -215,7 +224,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   #oo<-data.frame(runif(npoints,0,2*pi),matrix(runif((nphis-1)*npoints,0,pi),nrow=npoints));
   # changing from uniform cartesian below to normal cartesian let's see...
   #oo<-data.frame(crt2pol(gencartlims(maxs,mins,round(npoints/nphis+1))));
-  oo <- data.frame(crt2pol(gencartnorm(maxs,mins,npoints)));
+  oo <- data.frame(crt2pol(carts<-gencartnorm(maxs,mins,npoints)));
   colnames(oo) <- c('maxrad',phinames); #paste0(phiprefix,seq_len(nphis));
   # temporary note: this was hotpatched on phicycle 46 of local instance
   oo[,'maxrad'] <- apply(oo[,-1],1,pollim,maxs=maxs,mins=mins); 
@@ -225,15 +234,22 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   if(!fresh){
     #browser();
     fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
+    quadrants <- lapply(data.frame(carts),sign);
     #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
     bestfrac<- Inf #disabling this thing, it might be part of the problem
-    if(bestfrac<1){
-      filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T); #/fp$nsims.fit;
-      filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
+    #topn <- 50;
+    topn <- 0;
+    if(topn>0){
+      ### not yet tested ###
+      ranks <- unsplit(lapply(split(fp[,snames],quadrants),function(xx) rank(do.call(pmax,c(xx,na.rm=T)),na.last=F)),quadrants);
+      #filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T); #/fp$nsims.fit;
+      #filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
       # in env_fitpred() we turn illegal nsims.fit values (<0) into NAs so need
       # to not make that break the filtering...
-      filterkeep <- filterkeep & !is.na(filterkeep);
-      if((addback<-bestfrac*npoints-sum(filterkeep))>0) filterkeep[!filterkeep][seq_len(addback)]<-T;
+      #filterkeep <- filterkeep & !is.na(filterkeep);
+      filterkeep <- ranks >= npoints-topn;
+      ## TODO: adapt addback to new filterkeep 
+      #if((addback<-bestfrac*npoints-sum(filterkeep))>0) filterkeep[!filterkeep][seq_len(addback)]<-T;
       oo <- oo[filterkeep,];
       #maxrad <- maxrad[filterkeep];
       fp <- fp[filterkeep,];
