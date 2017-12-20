@@ -149,9 +149,9 @@ env_fitpred <- function(logenv,newdata
   preds <- lapply(krigs,predict,newdata[,phinames]);
   ses <- lapply(krigs,predictSE,newdata[,phinames]);
   oo <- do.call(data.frame,c(setNames(preds,logenv$names$fnames),setNames(ses,logenv$names$snames)));
-  oo<-do.call(data.frame,sapply(logenv$fits$models
-                            ,function(xx) with(predict(xx,newdata=newdata,se=T)
-                                               ,cbind(fit=fit,se=se.fit)),simplify=F));
+  #oo<-do.call(data.frame,sapply(logenv$fits$models
+  #                          ,function(xx) with(predict(xx,newdata=newdata,se=T)
+  #                                             ,cbind(fit=fit,se=se.fit)),simplify=F));
   if(!is.null(maxrad)){
     #fnames<-paste0(logenv$fits$radnames,'.fit');
     #snames<-paste0(logenv$fits$radnames,'.se');
