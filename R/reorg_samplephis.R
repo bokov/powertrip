@@ -140,15 +140,15 @@ env_fitpred <- function(logenv,newdata
   }
   if(example) return(summary(logenv$fits$radsphis[,phinames]));
   if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
-  # TODO: adapt the following Kriging models (if nrow(radsphis) > 2000, sample only
-  # 2000 rows, otherwise use the whole dataset). Krig() introduces a dependency 
-  # on the fields package.
-  # bar1<-mKrig(d2cx[1:2000,phinames],d2cx$rad.cx[1:2000])
-  # TODO: make predictions like this:
-  # fit<-predict(bar1,newdata[,2:3]);
-  # TODO: make prediction SEs like this:
-  # se.fit <- predictSE(bar1,newdat[,2:3]);
-  # TODO: either figure out how to do nsims or comment out or make into an optional feature
+  predsample<-seq_len(nrecords <- nrow(logenv$fits$radsphis));
+  if(nrecords>2000) predsample<-sample(predsample,2000,rep=F);
+  cat('Kriging...\n');
+  krigs <- sapply(logenv$names$radnames,function(xx) fields::mKrig(logenv$fits$radsphis[predsample,phinames]
+                                                                   ,logenv$fits$radsphis[[xx]][predsample],na.rm=T)
+                  ,simplify=F);
+  preds <- lapply(krigs,predict,newdata[,phinames]);
+  ses <- lapply(krigs,predictSE,newdata[,phinames]);
+  oo <- do.call(data.frame,c(setNames(preds,logenv$names$fnames),setNames(ses,logenv$names$snames)));
   oo<-do.call(data.frame,sapply(logenv$fits$models
                             ,function(xx) with(predict(xx,newdata=newdata,se=T)
                                                ,cbind(fit=fit,se=se.fit)),simplify=F));
@@ -160,7 +160,7 @@ env_fitpred <- function(logenv,newdata
     oo[fnames][ex] <- NA;
     oo[snames][ex] <- NA;
     # apparently especially with small samples you can get negative nsims!
-    oo$nsims.fit[oo$nsims.fit<0] <- NA;
+    #oo$nsims.fit[oo$nsims.fit<0] <- NA;
   }
   oo;
 };
@@ -230,24 +230,30 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   oo[,'maxrad'] <- apply(oo[,-1],1,pollim,maxs=maxs,mins=mins); 
   # Below hard assignment for fresh to true is temporary, for debugging, trying 
   # to get rid of the "binoculars"
-  fresh <- T;
+  #fresh <- T;
   if(!fresh){
     #browser();
     fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
     quadrants <- lapply(data.frame(carts),sign);
     #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
     bestfrac<- Inf #disabling this thing, it might be part of the problem
-    #topn <- 50;
-    topn <- 0;
+    topn <- 50;
+    #topn <- 0;
     if(topn>0){
-      ### not yet tested ###
-      ranks <- unsplit(lapply(split(fp[,snames],quadrants),function(xx) rank(do.call(pmax,c(xx,na.rm=T)),na.last=F)),quadrants);
+      # DONE: calculate topn*2^-length(split(fp,quadrants)) and when that number exceeds 
+      # the number of records for a quadrant, keep all of them, otherwise rank them within the quadrant
+      # and output the filter to unsplit
+      nkeep <- topn*2^-length(quadrants);
+      filterkeep <- unsplit(lapply(split(fp[,snames],quadrants),function(xx) {
+        if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
+          return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method = 'random',na.last=F)>(nrxx-nkeep))}})
+        ,quadrants);
       #filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T); #/fp$nsims.fit;
       #filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
       # in env_fitpred() we turn illegal nsims.fit values (<0) into NAs so need
       # to not make that break the filtering...
       #filterkeep <- filterkeep & !is.na(filterkeep);
-      filterkeep <- ranks >= npoints-topn;
+      #filterkeep <- ranks>round((npoints-topn)/2^length(quadrants));
       ## TODO: adapt addback to new filterkeep 
       #if((addback<-bestfrac*npoints-sum(filterkeep))>0) filterkeep[!filterkeep][seq_len(addback)]<-T;
       oo <- oo[filterkeep,];
