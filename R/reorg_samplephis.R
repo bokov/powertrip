@@ -472,7 +472,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     new.lims <- preds_lims(preds,limit=maxrad,numse = numse);
     # if the reason for failing is simply that it's too easy to detect a difference
     # lower the min lim and try again
-    if(new.lims['status']==-1 && mean(testtf,na.rm=T)>.9) lims['min']<-0 else lims <- new.lims;
+    if(new.lims['status']==-1 && mean(unlist(testtf),na.rm=T)>.9) lims['min']<-0 else lims <- new.lims;
     #if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
     # Currently, we give up on this entire set of phis and exit from phi_radius()
     # the first cycle when glm fails for all panel functions regardless of why.
