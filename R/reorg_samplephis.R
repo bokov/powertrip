@@ -339,8 +339,9 @@ preds_lims <- function(preds,tol=1,limit=1e6,numse=2,...){
   # determines which panels not yet finished::
   #     sepred*setol > tol  | min < 0 | max > limits
   notdone <- preds['respse',] > tol;
+  errorout <- c(min=NA,max=NA,status=-1,notfailed=notfailed,notdone=notdone);
   # if all panels failed, catch failure and signal accordingly
-  if(!any(notfailed,na.rm=T)) return(c(min=NA,max=NA,status=-1,notfailed=notfailed,notdone=notdone)); #TODO: log failure
+  if(!any(notfailed,na.rm=T)) return(errorout); #TODO: log failure
   # if all non-failed panels converged, return final estimates with failed ones flagged
   # if there are any non-failed non-converged panels
   # returns a single max and min for the next round of radii based on those
@@ -348,10 +349,9 @@ preds_lims <- function(preds,tol=1,limit=1e6,numse=2,...){
   status<-try(!any(select <- notfailed & notdone));
   if(is(status,'try-error')) browser();
   if(status) select <- notfailed;
-  return(c(
-     min=max(min(preds['radest',select] - preds['radse',select]*numse),0) # used to be 0
-    ,max=min(max(preds['radest',select] + preds['radse',select]*numse),limit)
-    ,status=status,notfailed=notfailed,notdone=notdone));
+  out <- c(min=max(min(preds['radest',select] - preds['radse',select]*numse),0)
+           ,max=min(max(preds['radest',select] + preds['radse',select]*numse),limit)
+           ,status=status,notfailed=notfailed,notdone=notdone);
 }
 
 #' Not needed, one liner: runif(nn,lims[1],lims[2]);
@@ -439,6 +439,12 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   tfoffset <- 0;
   t0 <- Sys.time();
   while(lims['status']==0){
+    # at 1.17e-6 we start sampling radii so close to each other that glm() errors
+    # this is to prevent that
+    if(abs(diff(lims[c('min','max')]))<1e-5) {
+      lims['min'] <- lims['min']/2;
+      lims['max']<-median(c(lims['max'],maxrad));
+    }
     # if the coords have been transformed, backtrans puts them back on the scale
     # that ptsim() expects
     cyclecoords <- backtrans(
