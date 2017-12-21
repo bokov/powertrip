@@ -333,6 +333,7 @@ preds_lims <- function(preds,tol=1,limit=1e6,numse=2,...){
   # determines which panels failed on latest round 
   # even one the log scale negative values should still be disallowed, so 
   # uncommenting the next line and dcommenting out the one I had for a while
+  if(length(dim(preds))!=2) {cat('Wrong number of dimensions for preds\n'); browser();}
   notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
   #notfailed <- preds['conv',]==1 & preds['radest',] < limit;
   # determines which panels not yet finished::
