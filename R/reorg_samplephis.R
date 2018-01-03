@@ -199,7 +199,20 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
 #' 
 #' Definitely looks like setting limits such that they actually get encountered
 #' causes a lot of failures
-make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,numse=2,fresh=F,...){
+#' 
+#' Returns a data.frame of maxrads, phis, maxs, and mins unless keepfits=T
+make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
+                      # how many of the generated phis to actually use?
+                      ,topn=50
+                      # size of initial prediction interval for each set of phis 
+                      ,numse=2
+                      # if manually set to TRUE will bypass prediction even if 
+                      # the logenv object can support it
+                      ,fresh=F
+                      # if set to TRUE returns a list containing the phis 
+                      # data.frame and also a fits object (currently also a
+                      # data.frame). Not compatible with fresh=T
+                      ,keepfits=F,...){
   # Note: do not change phi prefix without also changing the fields argument of
   # pt2df() or the generation of subsequent rounds of phis will break
   # if no data obtained yet or fresh manually set to T then phiprefix and nphis
@@ -225,6 +238,9 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
   # changing from uniform cartesian below to normal cartesian let's see...
   #oo<-data.frame(crt2pol(gencartlims(maxs,mins,round(npoints/nphis+1))));
   # TODO: modularize generation of random phis (i.e. alternatives to gencartnorm())
+  #       but keep the crt2pol here... perhaps make carts an argument that can
+  #       be a matrix/data.frame of cartesian coords or or a function that 
+  #       generates one
   oo <- data.frame(crt2pol(carts<-gencartnorm(maxs,mins,npoints)));
   # note: we're throwing away the rad column, so we're just renaming it to maxrad
   # in the below line, and in the step after that we overwrite the values with
@@ -237,11 +253,6 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
     fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
     quadrants <- lapply(data.frame(carts),sign);
     #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
-    bestfrac<- Inf #disabling this thing, it might be part of the problem
-    # TODO: cease hardcoding topn
-    # TODO: have an option for returning fp as well as oo
-    topn <- 50;
-    #topn <- 0;
     if(topn>0){
       # DONE: calculate topn*2^-length(split(fp,quadrants)) and when that number exceeds 
       # the number of records for a quadrant, keep all of them, otherwise rank them within the quadrant
@@ -277,7 +288,15 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi',bestfrac=0.5,nums
     # TODO: catch the maxs<0 case further upstream
     badmaxs<-oo$maxs<=0|is.infinite(oo$maxs);
     oo$maxs[badmaxs]<-oo$maxrad[badmaxs];
-  } else {oo$mins <- 0; oo$maxs <- oo$maxrad};
+    if(keepfits) oo <- list(phis=oo,fits=fp);
+  } else { 
+    if(keepfits) warning(
+"Either you manually set the make_phis() 'fresh' argument to TRUE or you are
+calling make_phis() on a ptenv object that does not yet have sufficient data to 
+make predictions. Either case is incompatible with the 'keepfits' argument of 
+make_phis() being set to TRUE, and it is being ignored."
+    );
+    oo$mins <- 0; oo$maxs <- oo$maxrad};
   oo; #cbind(oo,maxrad);
 }
 
@@ -565,7 +584,7 @@ powertrip<-function(logenv=logenv,refcoords
                     ,savefile=paste0(wd,'pt_result.rdata')
                     ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
                     ,topsourcepatch=paste0(wd,'pt_top_sourcepatch.R')
-                    ,bestfrac = 0.5
+                    #,bestfrac = 0.5
                     # these run at the level of each radius
                     ,pnlst=list(#lm=ptpnl_lm
                                    lm2=update(ptpnl_lm,fname='lm2',frm=yy~(.)*group)
