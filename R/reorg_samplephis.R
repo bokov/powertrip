@@ -155,7 +155,7 @@ env_fitpred <- function(logenv,newdata
   krigs <- sapply(logenv$names$radnames,function(xx) fields::mKrig(logenv$fits$radsphis[predsample,phinames]
                                                                    ,trfun(logenv$fits$radsphis[[xx]][predsample]),na.rm=T
                                                                    # experimental
-                                                                   ,cov.function='wendland.cov'
+                                                                   ,cov.function='stationary.taper.cov'
                                                                    #,Distance='rdist.earth'
                                                                    #,cov.args=list(R=1)
                                                                    ,lambda=lambda,theta=theta)
