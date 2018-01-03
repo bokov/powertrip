@@ -134,6 +134,13 @@ env_fitpred <- function(logenv,newdata
                         # required argument
                         ,example=F
                         ,maxrad=NULL
+                        # smoothing parameter for mKrig()
+                        ,lambda=0.5
+                        # also passed to mKrig() apparently then passed to covariance function
+                        ,theta=1
+                        # experimental: if set to TRUE will take log of radsphis before kriging
+                        # but the SEs will be wrong at the moment
+                        ,logpred=F
                         ,...){
   if(is.null(phinames<-logenv$names$phinames)||is.null(snames<-logenv$names$snames)||is.null(fnames<-logenv$names$fnames)){
     stop('logenv must contain valid phinames, snames, and fnames vectors inside its names list so we know which columns to use');
@@ -143,12 +150,18 @@ env_fitpred <- function(logenv,newdata
   predsample<-seq_len(nrecords <- nrow(logenv$fits$radsphis));
   if(nrecords>2000) predsample<-sample(predsample,2000,rep=F);
   cat('Kriging...\n');
+  trfun <- if(logpred) log else identity;
+  invfun <- if(logpred) exp else identity;
   krigs <- sapply(logenv$names$radnames,function(xx) fields::mKrig(logenv$fits$radsphis[predsample,phinames]
-                                                                   ,logenv$fits$radsphis[[xx]][predsample],na.rm=T)
+                                                                   ,trfun(logenv$fits$radsphis[[xx]][predsample]),na.rm=T
+                                                                   # experimental
+                                                                   ,Distance='rdist.earth'
+                                                                   ,cov.args=list(R=1)
+                                                                   ,lambda=lambda,theta=theta)
                   ,simplify=F);
   preds <- lapply(krigs,predict,newdata[,phinames]);
   ses <- lapply(krigs,predictSE,newdata[,phinames]);
-  oo <- do.call(data.frame,c(setNames(preds,logenv$names$fnames),setNames(ses,logenv$names$snames)));
+  oo <- invfun(do.call(data.frame,c(setNames(preds,logenv$names$fnames),setNames(ses,logenv$names$snames))));
   #oo<-do.call(data.frame,sapply(logenv$fits$models
   #                          ,function(xx) with(predict(xx,newdata=newdata,se=T)
   #                                             ,cbind(fit=fit,se=se.fit)),simplify=F));
