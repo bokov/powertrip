@@ -1,3 +1,4 @@
+# TODO: allow configuring wait-times
 read_ptenv<-function(logenv,...){
   oo<-list(logenv=if(is.character(logenv)) logenv<-load.ptenv(logenv) else logenv);
   nfnames <- paste0('lims.',logenv$names$notfailed);

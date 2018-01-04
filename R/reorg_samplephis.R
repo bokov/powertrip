@@ -19,8 +19,11 @@ ptmg <- function(action=c('save','debug')
 
 #' Shortcut for loading a saved powertrip environment
 load.ptenv <- function(file='pt_result.rdata',env=new.env(),logenvonly=T,savewait=0.5,...) {
-  if(savewait>0) ptmg(action='save',...);
-  Sys.sleep(savewait);
+  if(savewait>0) {
+    ptmg(action='save',...);
+    tmpsave <- paste0(savefile,'.tmp');
+    while(file.exists(tmpsave)) Sys.sleep(savewait);
+  }
   load(file,envir = env); class(env)<-c('ptenv',class(env)); 
   if(logenvonly) env$logenv else env;
 }
@@ -472,6 +475,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   #if(missing(maxrad)) maxrad<-pollim(phi,maxs=maxs,mins=mins);
   # lenght of current verdicts
   #nntf <- length(list_tfresp);
+  tmpsave<-paste0(savefile,'.tmp');
   cycle <- 1;
   lims <- c(min=min,max=max,status=0);
   btrefcoords <- backtrans(refcoords);
@@ -530,8 +534,10 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     cycle <- cycle+1; tfoffset <- length(list_tfresp);
     if(file.exists(savetrigger)) {
       print('  Saving. ');
-      save(logenv,file=savefile);
+      save(logenv,file=tmpsave);
+      file.rename(tmpsave,savefile);
       file.remove(savetrigger);
+      print('  File saved. ');
     }
     if(file.exists(debugtrigger)){
       browser();
@@ -540,6 +546,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       print('  Patching  ');
       source(sourcepatch,local = T);
       file.rename(sourcepatch,paste0(sourcepatch,'.bak'));
+      print('  Patched. ');
     }
   };
   pnlph(ppdat,preds['radest',],logenv=logenv,time=Sys.time()-t0);
