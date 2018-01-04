@@ -21,7 +21,7 @@ ptmg <- function(action=c('save','debug')
 load.ptenv <- function(file='pt_result.rdata',env=new.env(),logenvonly=T,savewait=0.5,...) {
   if(savewait>0) {
     ptmg(action='save',...);
-    tmpsave <- paste0(savefile,'.tmp');
+    tmpsave <- paste0(file,'.tmp');
     while(file.exists(tmpsave)) Sys.sleep(savewait);
   }
   load(file,envir = env); class(env)<-c('ptenv',class(env)); 
@@ -651,9 +651,14 @@ powertrip<-function(logenv=logenv,refcoords
   logenv$names$phinames <- phinames <- paste0('phi',seq_len(nphis));
   # names of the notfailed elements in the lims vector, for subsetting which rads to report
   logenv$names$notfailed <- paste0('notfailed.',logenv$names$pnfit);
+  logenv$names$notdone <- paste0('notdone.',logenv$names$pnfit);
   # alist to be used in the fields argument of pt2df as invoked within env_fitinit()
-  logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]==T,preds['radest',],NA),ptenv$names$radnames),setNames(phi,ptenv$names$phinames),nsims=nsims);
-
+  logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]&!lims[ptenv$names$notdone]
+                                               ,preds['radest',]
+                                               ,NA)
+                                        ,ptenv$names$radnames)
+                               ,setNames(phi,ptenv$names$phinames),nsims=nsims);
+  
   # The below is a catch-all way to do runtime patches to most arguments
   logenv$state$powertrip <- environment();
   console_log <- T;
