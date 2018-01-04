@@ -59,10 +59,9 @@ subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle
   subset<-substitute(subset);
   oo <- cbind(x$maindata,x$points);
   lsubset <- as.list(subset);
-  if(is.language(subset)||is.expression(subset)){
-    tfsubset <- eval(subset,envir=oo)}
-  } else if(is.character(subset)||lsubset[[1]]==quote(c)||lsubset[[1]]==quote(list)) {
-    dots<-c(dots,lsubset[-1]); tfsubset <-T};
+  if(is.character(subset)||lsubset[[1]]==quote(c)||lsubset[[1]]==quote(list)) {
+    dots<-c(dots,lsubset[-1]); tfsubset <-T
+    } else if(is.language(subset)||is.expression(subset)) tfsubset <- eval(subset,envir=oo);
   for(ii in dots) if(is.character(ii)&&ii %in% colnames(x$subsets)) tfsubset <- tfsubset & x$subsets[,ii];
   tfsubset <- tfsubset & x$maindata$phicycle > minphicycle & x$maindata$phicycle <= maxphicycle;
   carts <- intersect(select,colnames(x$crtcolumns));
