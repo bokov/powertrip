@@ -151,7 +151,13 @@ env_fitpred <- function(logenv,newdata
   if(example) return(summary(logenv$fits$radsphis[,phinames]));
   if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
   predsample<-seq_len(nrecords <- nrow(logenv$fits$radsphis));
-  if(nrecords>2000) predsample<-sample(predsample,2000,rep=F);
+  if(nrecords>2000) {
+    # experimental, for weighted sampling
+    pmaxs <- do.call(pmax,c(logenv$fits$radsphis[,phinames],na.rm=T));
+    # here is a version that tilts the sampling away from close-to-origin values:
+    # predsample <- sample(predsample,2000,rep=F,prob=ifelse(pmaxs>quantile(pmaxs,.75,na.rm=T),7,1));
+    predsample<-sample(predsample,2000,rep=F);
+  }
   cat('Kriging...\n');
   trfun <- if(logpred) log else identity;
   invfun <- if(logpred) exp else identity;
