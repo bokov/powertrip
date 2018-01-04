@@ -342,7 +342,7 @@ resp_preds <- function(tfresp,radii,power=0.8,narate=0.5){
   #if(missing(glmfit)) {glmfit <- glm(tfresp~radii,family='binomial') } else {
   #  glmfit <- update(glmfit) };
   # system.time shows that creating the fit de-novo is faster than updating
-  outnames <- c('radest','radse','respect','respse','conv');
+  outnames <- c('radest','radse','respest','respse','conv');
   outerror <- setNames(c(rep(NA,length(outnames)-1),-1),outnames);
   okay <- !is(try(nas<-mean(is.na(tfresp))),'try-error');
   if(okay & nas < narate) {
@@ -509,7 +509,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     preds <- try(sapply(testtf,resp_preds,radii=testrd));
     if(class(preds)[1]=='try-error') browser();
     #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
-    new.lims <- preds_lims(preds,limit=maxrad,numse = numse);
+    new.lims <- preds_lims(preds,limit=maxrad,numse = numse,...);
     # if the reason for failing is simply that it's too easy to detect a difference
     # lower the min lim and try again
     if(new.lims['status']==-1 && mean(unlist(testtf),na.rm=T)>.9) lims['min']<-0 else lims <- new.lims;
