@@ -54,13 +54,15 @@ length.summary.ptenv <- function(x,...) nrow(x$maindata);
 # ... : put subset names here if desired when the subset argument is already used
 # for a logical expression
 # Also copying this into the [ method
-`[.summary.ptenv`<-subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle=length(x)){
+subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle=length(x)){
   dots <- list(...);
   subset<-substitute(subset);
   oo <- cbind(x$maindata,x$points);
-  if(is.character(subset)||subset[[1]]==quote(c)||subset[[1]]==quote(list)) {
-    dots<-c(dots,as.list(subset[-1])); tfsubset <-T} else {
-    tfsubset <- eval(subset,envir=oo)};
+  lsubset <- as.list(subset);
+  if(is.language(subset)||is.expression(subset)){
+    tfsubset <- eval(subset,envir=oo)}
+  } else if(is.character(subset)||lsubset[[1]]==quote(c)||lsubset[[1]]==quote(list)) {
+    dots<-c(dots,lsubset[-1]); tfsubset <-T};
   for(ii in dots) if(is.character(ii)&&ii %in% colnames(x$subsets)) tfsubset <- tfsubset & x$subsets[,ii];
   tfsubset <- tfsubset & x$maindata$phicycle > minphicycle & x$maindata$phicycle <= maxphicycle;
   carts <- intersect(select,colnames(x$crtcolumns));
@@ -68,6 +70,8 @@ length.summary.ptenv <- function(x,...) nrow(x$maindata);
   for(ii in carts) select <- c(x$crtcolumns[,ii],select);
   oo[tfsubset,select,drop=F];
 }
+
+[.summary.ptenv`<-subset.summary.ptenv;
 
 # ... : name/s of column/s for which to get ranges
 range.data.frame <- function(df,...){
