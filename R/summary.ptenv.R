@@ -70,7 +70,7 @@ subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle
   oo[tfsubset,select,drop=F];
 }
 
-[.summary.ptenv`<-subset.summary.ptenv;
+`[.summary.ptenv`<-subset.summary.ptenv;
 
 # ... : name/s of column/s for which to get ranges
 range.data.frame <- function(df,...){
