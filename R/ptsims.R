@@ -182,7 +182,8 @@ ptpnl_summary <- new.ptpnl('summ.old'
                            ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
                                        ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
                                        ,nsims=length(callingframe$list_tfresp)
-                                       ,time=time)
+                                       ,time=time
+                                       ,tstamp=Sys.time())
                                           # ,preds=preds,phi=phi,time=time,cycles=cycles,nsims=nsims)
                            #,index=substitute(c('coords',`philabel_`,'summ')));
 );
