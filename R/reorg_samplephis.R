@@ -677,7 +677,7 @@ powertrip<-function(logenv=logenv,refcoords
   # Increment phicycle from previous run by 1 if it exists, otherwise start with 1
   phicycle <- c(logenv$state$phicycle,0)[1]+1;
   # export final phicycle when exiting
-  on.exit(logenv$state$phicycle<-phicycle);
+  #on.exit(logenv$state$phicycle<-phicycle);
 
   while(phicycle < maxphicycle){
     if(file.exists(topsourcepatch)) {
@@ -712,8 +712,7 @@ powertrip<-function(logenv=logenv,refcoords
                  ,sourcepatch=sourcepatch
                  ,phicycle=phicycle,...);
     }
-    #if(phicycle==1) browser();
-    phicycle<-phicycle+1
+    logenv$state$phicycle<-phicycle<-phicycle+1;
   }
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
     phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)
