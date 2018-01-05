@@ -539,7 +539,9 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     # The below code catches the case where a set of phis if failing because there
     # are not enough failures to detect... these seem to often be fixable by dropping
     # the lower bound to 0 and trying again
-    if(new.lims['status']==-1 && mean(unlist(testtf),na.rm=T)>.9) lims['min']<-0 else limst <- new.lims;
+    if(new.lims['status']==-1 || as.numeric((Sys.time()-t0),units='secs')>timeout){
+      if(mean(unlist(testtf),na.rm=T)>.9) lims['min'] <- 0 else lims['status'] <- -1
+    } else lims <- new.lims;
     # when to give up on phis that take too long... currently set to 3 hours,
     # will dial down after observing the distribution of times
     if(as.numeric((Sys.time()-t0),units='secs')>timeout) lims['status']<- -1;
