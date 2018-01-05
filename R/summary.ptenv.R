@@ -46,6 +46,10 @@ head.summary.ptenv<-function(x,...){
   head(x$maindata);
 }
 
+tail.summary.ptenv<-function(x,...){
+  tail(x$maindata);
+}
+
 length.summary.ptenv <- function(x,...) nrow(x$maindata);
 
 # x : summary.ptenv object

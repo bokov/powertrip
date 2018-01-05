@@ -226,7 +226,7 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
 #' Returns a data.frame of maxrads, phis, maxs, and mins unless keepfits=T
 make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
                       # how many of the generated phis to actually use?
-                      ,topn=50
+                      ,topn=round(npoints/2)
                       # size of initial prediction interval for each set of phis 
                       ,numse=2
                       # if manually set to TRUE will bypass prediction even if 
@@ -272,19 +272,30 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
   # temporary note: this was hotpatched on phicycle 46 of local instance
   oo[,'maxrad'] <- apply(oo[,-1],1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
-    #browser();
     fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
-    quadrants <- lapply(data.frame(carts),sign);
-    #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
     if(topn>0){
+      ## instead of equally representing each quadrant, a more sensible approach is
+      ## equally representing predicted distances from reference point
+      #quadrants <- lapply(data.frame(carts),sign);
+      pmrads<-do.call(pmax,fp[,fnames]);
+      cuts<-cut(pmrads,quantile(pmrads,c(0,.5,.75,1)),include.lowest=T);
+      #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
+      # TODO: make topn (or frac-keep) configurable
       # DONE: calculate topn*2^-length(split(fp,quadrants)) and when that number exceeds 
       # the number of records for a quadrant, keep all of them, otherwise rank them within the quadrant
       # and output the filter to unsplit
-      nkeep <- topn*2^-length(quadrants);
-      filterkeep <- unsplit(lapply(split(fp[,snames]+pmax(fp[,fnames],0),quadrants),function(xx) {
+      ## nkeep <- topn*2^-length(quadrants);
+      nkeep <- round(topn/3);
+      ## removing, in favor of sampling by predicted raii
+      # filterkeep <- unsplit(lapply(split(fp[,snames]+pmax(fp[,fnames],0),quadrants),function(xx) {
+      #   if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
+      #     return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method = 'random',na.last=F)>(nrxx-nkeep))}})
+      #   ,quadrants);
+      ## end of removed section
+      filterkeep <- unsplit(lapply(split(fp[,snames],cuts),function(xx) {
         if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
-          return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method = 'random',na.last=F)>(nrxx-nkeep))}})
-        ,quadrants);
+          return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method='random')>(nrxx-nkeep))}
+        }),cuts);
       #filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T); #/fp$nsims.fit;
       #filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
       # in env_fitpred() we turn illegal nsims.fit values (<0) into NAs so need
@@ -661,6 +672,7 @@ powertrip<-function(logenv=logenv,refcoords
   
   # The below is a catch-all way to do runtime patches to most arguments
   logenv$state$powertrip <- environment();
+  logenv$state$call <- match.call();
   console_log <- T;
   # Increment phicycle from previous run by 1 if it exists, otherwise start with 1
   phicycle <- c(logenv$state$phicycle,0)[1]+1;
