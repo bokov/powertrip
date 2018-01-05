@@ -141,16 +141,21 @@ env_fitpred <- function(logenv,newdata
                         ,lambda=0.5
                         # also passed to mKrig() apparently then passed to covariance function
                         ,theta=1
+                        ,subset=T
                         # experimental: if set to TRUE will take log of radsphis before kriging
                         # but the SEs will be wrong at the moment
                         ,logpred=F
                         ,...){
-  if(is.null(phinames<-logenv$names$phinames)||is.null(snames<-logenv$names$snames)||is.null(fnames<-logenv$names$fnames)){
-    stop('logenv must contain valid phinames, snames, and fnames vectors inside its names list so we know which columns to use');
+  if(is.null(phinames<-logenv$names$phinames)||
+     is.null(snames<-logenv$names$snames)||
+     is.null(fnames<-logenv$names$fnames)||
+     is.null(radnames<-logenv$names$radnames)){
+    stop('logenv must contain valid phinames, snames, fnames, and radnames vectors inside its names list so we know which columns to use');
   }
   if(example) return(summary(logenv$fits$radsphis[,phinames]));
+  radsphis <- subset(logenv$fits$radsphis,subset=subset)[,c(radnames,phinames)];
   if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
-  predsample<-seq_len(nrecords <- nrow(logenv$fits$radsphis));
+  predsample<-seq_len(nrecords <- nrow(radsphis));
   if(nrecords>2000) {
     # experimental, for weighted sampling
     pmaxs <- do.call(pmax,c(logenv$fits$radsphis[,phinames],na.rm=T));
@@ -161,14 +166,14 @@ env_fitpred <- function(logenv,newdata
   cat('Kriging...\n');
   trfun <- if(logpred) log else identity;
   invfun <- if(logpred) exp else identity;
-  krigs <- sapply(logenv$names$radnames,function(xx) fields::mKrig(logenv$fits$radsphis[predsample,phinames]
-                                                                   ,trfun(logenv$fits$radsphis[[xx]][predsample]),na.rm=T
-                                                                   # experimental, commented out for running instances
-                                                                   #,cov.function='stationary.taper.cov'
-                                                                   #,Distance='rdist.earth'
-                                                                   #,cov.args=list(R=1)
-                                                                   #,lambda=lambda,theta=theta
-                                                                   ),simplify=F);
+  krigs <- sapply(radnames,function(xx) fields::mKrig(radsphis[predsample,phinames]
+                                                      ,trfun(radsphis[[xx]][predsample]),na.rm=T
+                                                      # experimental, commented out for running instances
+                                                      #,cov.function='stationary.taper.cov'
+                                                      #,Distance='rdist.earth'
+                                                      #,cov.args=list(R=1)
+                                                      #,lambda=lambda,theta=theta
+                                                      ),simplify=F);
   preds <- lapply(krigs,predict,newdata[,phinames]);
   ses <- lapply(krigs,predictSE,newdata[,phinames]);
   oo <- invfun(do.call(data.frame,c(setNames(preds,logenv$names$fnames),setNames(ses,logenv$names$snames))));
@@ -272,7 +277,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
   # temporary note: this was hotpatched on phicycle 46 of local instance
   oo[,'maxrad'] <- apply(oo[,-1],1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
-    fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad);
+    fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad,...);
     if(topn>0){
       ## instead of equally representing each quadrant, a more sensible approach is
       ## equally representing predicted distances from reference point
