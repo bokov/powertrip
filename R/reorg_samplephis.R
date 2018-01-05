@@ -475,6 +475,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
                        # name of file that will be sourced (once and then moved) if found
                        ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
                        ,phicycle=0,backtrans=identity
+                       ,timeout=3600 # how many seconds to try on a given phi-set before giving up
                        ,...){
   # The function which will plug the above modules into each other and test them
   # jointly
@@ -533,7 +534,15 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     new.lims <- preds_lims(preds,limit=maxrad,numse = numse,...);
     # if the reason for failing is simply that it's too easy to detect a difference
     # lower the min lim and try again
-    if(new.lims['status']==-1 && mean(unlist(testtf),na.rm=T)>.9) lims['min']<-0 else lims <- new.lims;
+    # TODO: dynamically calculated a hitrate cutoff midway between the target hitrate
+    #       and 1.0 in case somebody someday is seeking a power of, say, .9
+    # The below code catches the case where a set of phis if failing because there
+    # are not enough failures to detect... these seem to often be fixable by dropping
+    # the lower bound to 0 and trying again
+    if(new.lims['status']==-1 && mean(unlist(testtf),na.rm=T)>.9) lims['min']<-0 else limst <- new.lims;
+    # when to give up on phis that take too long... currently set to 3 hours,
+    # will dial down after observing the distribution of times
+    if(as.numeric((Sys.time()-t0),units='secs')>timeout) lims['status']<- -1;
     #if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
     # Currently, we give up on this entire set of phis and exit from phi_radius()
     # the first cycle when glm fails for all panel functions regardless of why.
@@ -566,7 +575,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       print('  Patched. ');
     }
   };
-  pnlph(ppdat,preds['radest',],logenv=logenv,time=Sys.time()-t0);
+  pnlph(ppdat,preds['radest',],logenv=logenv,time=as.numeric(Sys.time()-t0,units='secs'));
   if(lims['status']==1){
     cat('Success: ');
     #if(first_success){first_success<-F; browser();}

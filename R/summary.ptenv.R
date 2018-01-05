@@ -1,13 +1,19 @@
 # TODO: allow configuring wait-times
 read_ptenv<-function(logenv,...){
   oo<-list(logenv=if(is.character(logenv)) logenv<-load.ptenv(logenv) else logenv);
-  nfnames <- paste0('lims.',logenv$names$notfailed);
-  radnames <- logenv$names$radnames;
+  nfnames <- paste0('lims.',oo$logenv$names$notfailed);
+  radnames <- oo$logenv$names$radnames;
   oo$polradcols <- c(radnames,'maxrad','lims.min','lims.max');
-  oo$phinames <- logenv$names$phinames;
-  oo$crtcolumns <- sapply(oo$polradcols,paste0,c('.X2','.X3','.X1'));
-  colnames(oo$crtcolumns) <- paste0('c.',colnames(oo$crtcolumns));
-  oo$maindata <- pt2df(logenv); #head(oo$maindata);
+  oo$phinames <- oo$logenv$names$phinames;
+  polcols <- sapply(oo$logenv$names$radnames,c,oo$phinames);
+  colnames(polcols)<-paste0('p.',colnames(polcols));
+  crtsuffixes<-paste0('.X',seq_len(1+length(oo$phinames)));
+  # rearrange to put 'most interesting' dimension on Z axis?!
+  crtsuffixes <- c(crtsuffixes[-1],crtsuffixes[1]);
+  crtcols <- sapply(oo$polradcols,paste0,crtsuffixes);
+  colnames(crtcols) <- paste0('c.',colnames(crtcols));
+  oo$crtcolumns <-cbind(crtcols,polcols);
+  oo$maindata <- pt2df(oo$logenv); #head(oo$maindata);
   oo$points <-do.call(cbind,sapply(oo$polradcols
                                    ,function(xx) dfcrt(oo$maindata,xx),simplify=F));
   oo$subsets <- data.frame(sapply(setNames(sprintf('%s==1',nfnames),paste0('s.',radnames)),function(xx) eval(parse(text=xx)[[1]],envir=oo$maindata)));
@@ -64,10 +70,16 @@ subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle
   subset<-substitute(subset);
   oo <- cbind(x$maindata,x$points);
   lsubset <- as.list(subset);
-  if(is.character(subset)||lsubset[[1]]==quote(c)||lsubset[[1]]==quote(list)) {
-    dots<-c(dots,lsubset[-1]); tfsubset <-T
-    } else if(is.language(subset)||is.expression(subset)) tfsubset <- eval(eval(subset,envir=oo));
-  for(ii in dots) if(is.character(ii)&&ii %in% colnames(x$subsets)) tfsubset <- tfsubset & x$subsets[,ii];
+  tfsubset <- T;
+  if(is.character(subset)){
+    dots<-c(dots,subset); 
+    } else if(lsubset[[1]]==quote(c)||lsubset[[1]]==quote(list)) {
+      dots<-c(dots,lsubset[-1]); 
+      } else if(is.language(subset)||is.expression(subset)) tfsubset <- eval(eval(subset,envir=oo));
+  for(ii in dots) {
+    if(is.character(ii)&&ii %in% colnames(x$subsets)) tfsubset <- tfsubset & x$subsets[,ii];
+    if(is.language(ii)) tfsubset <- tfsubset & eval(eval(ii,envir = oo));
+  }
   tfsubset <- tfsubset & x$maindata$phicycle > minphicycle & x$maindata$phicycle <= maxphicycle;
   carts <- intersect(select,colnames(x$crtcolumns));
   select <- setdiff(select,carts);
