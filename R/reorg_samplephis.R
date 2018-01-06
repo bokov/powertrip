@@ -545,8 +545,17 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     # are not enough failures to detect... these seem to often be fixable by dropping
     # the lower bound to 0 and trying again
     if(new.lims['status']==-1 || as.numeric((Sys.time()-t0),units='secs')>timeout){
-      if(mean(unlist(testtf),na.rm=T)>.9) lims['min'] <- 0 else lims['status'] <- -1
-    } else lims <- new.lims;
+      hitrate <- mean(unlist(testtf),na.rm=T);
+      if(new.lims['min']>0 && hitrate>.9) new.lims[c('status','min')] <- 0 else new.lims['status'] <- -1;
+      if(hitrate<.1) {
+        if(new.lims['max']<maxrad) {
+          new.lims['max']<-maxrad; new.lims['status'] <- 0;
+        } else {
+          new.lims['status'] <- -1;
+          new.lims[logenv$names$notfailed] <- 1;
+          new.lims[logenv$names$notdone] <- 0;
+          }}};
+    lims <- new.lims;
     # when to give up on phis that take too long... currently set to 3 hours,
     # will dial down after observing the distribution of times
     if(as.numeric((Sys.time()-t0),units='secs')>timeout) lims['status']<- -1;
