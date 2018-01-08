@@ -282,7 +282,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
       ## instead of equally representing each quadrant, a more sensible approach is
       ## equally representing predicted distances from reference point
       #quadrants <- lapply(data.frame(carts),sign);
-      pmrads<-do.call(pmax,fp[,fnames]);
+      pmrads<-do.call(pmax,c(fp[,fnames],na.rm=T));
       cuts<-cut(pmrads,quantile(pmrads,c(0,.5,.75,1),na.rm = T),include.lowest=T);
       #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
       # TODO: make topn (or frac-keep) configurable
