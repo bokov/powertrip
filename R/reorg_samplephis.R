@@ -571,22 +571,15 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
         new.lims['max']<-maxrad; new.lims['status'] <- 0;
         timeout <-2*timeout;
         cat(' restarting with max=maxrad ');
-      } else if(any(oob<- preds['radest',]>maxrad)){
-        # if unrecoverable failure but with out-of-bounds (oob) prediction/s
-        # keep failure state but make the predictions visible to pt2df
-        new.lims[logenv$names$notfailed] <- pmax(oob,0,na.rm=T);
-        new.lims[logenv$names$notdone] <- 1 - new.lims[logenv$names$notfailed];
-        # might be a need for a new failure code but for now it be sufficient to
-        # distinguish the oob failures by the fact that they have individual 
-        # notfailed & done statuses combined with a global -1 status for the 
-        # phis
       }
     }
+    # if there are still out-of-bounds predictions keep status as-is (0 or -1) 
+    # but make the oob predictions visible to pt2df
+    if(any(oob <- pmax(preds['radest',],0,na.rm=T)>maxrad)){
+      new.lims[logenv$names$notfailed][oob]<- -2;
+      new.lims[logenv$names$notdone][oob] <- 0;
+    };
     lims <- new.lims;
-    # when to give up on phis that take too long... currently set to 3 hours,
-    # will dial down after observing the distribution of times
-    if(as.numeric((Sys.time()-t0),units='secs')>timeout) lims['status']<- -1;
-    #if(any(na.omit(lims[c('min','max')])<0|na.omit(lims[c('min','max')])>maxrad)) browser(text='Invalid limits!');
     # Currently, we give up on this entire set of phis and exit from phi_radius()
     # the first cycle when glm fails for all panel functions regardless of why.
     # TODO: this doesn't go far enough-- find a way to detect > X% NAs in the 
@@ -718,9 +711,9 @@ powertrip<-function(logenv=logenv,refcoords
   logenv$names$notfailed <- paste0('notfailed.',logenv$names$pnfit);
   logenv$names$notdone <- paste0('notdone.',logenv$names$pnfit);
   # alist to be used in the fields argument of pt2df as invoked within env_fitinit()
-  logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]&!lims[ptenv$names$notdone]
-                                               ,preds['radest',]
-                                               ,NA)
+  logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]!=0 & 
+                                                 !lims[ptenv$names$notdone]
+                                               ,preds['radest',],NA)
                                         ,ptenv$names$radnames)
                                ,setNames(phi,ptenv$names$phinames),nsims=nsims);
   
