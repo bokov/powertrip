@@ -301,6 +301,12 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
         if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
           return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method='random')>(nrxx-nkeep))}
         }),cuts);
+      # I guess we sometimes still get some NAs making their way into filterkeep
+      # and then causing trouble, so turn all NA values of filterkeep to F
+      filterkeep <- filterkeep & !is.na(filterkeep);
+      # TODO: later, when other problems are fixed, consider turning them to T
+      #       instead in order to more thoroughly probe precisely the probem
+      #       areas
       #filter <- rowMeans(apply(fp[,snames],2,rank,na.last = 'keep'),na.rm = T); #/fp$nsims.fit;
       #filterkeep <- filter>quantile(filter,bestfrac,na.rm=T);
       # in env_fitpred() we turn illegal nsims.fit values (<0) into NAs so need
