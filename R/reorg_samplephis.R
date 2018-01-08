@@ -356,7 +356,13 @@ pt2df <- function(ptenv,summname='summ'
   dots <- as.list(substitute(list(...))[-1]);
   # to the default fields below add in maxrad=maxrad next time logenv is rebuilt
   fields <- c(fields,dots);
-  oo<-data.frame(t(sapply(ptenv$coords,function(xx) with(xx[[summname]][[1]],do.call('c',fields)))));
+  rows <- sapply(ptenv$coords
+                 ,function(xx) with(xx[[summname]][[1]],do.call('c',fields))
+                 ,simplify=F);
+  if(length(unique(sapply(rows,length)))){
+    oo <- bind_rows(lapply(rows,function(xx) data.frame(rbind(xx))),.id='ID');
+    warning('pt2df(): rows of unequal length, doing it the slow way.')
+  } else oo<-data.frame(t(do.call(rbind,rows)));
   cat('Read',nrow(oo),'rows,',ncol(oo),'columns.\n');
   oo;
 }
@@ -718,7 +724,8 @@ powertrip<-function(logenv=logenv,refcoords
   logenv$names$notdone <- paste0('notdone.',logenv$names$pnfit);
   # alist to be used in the fields argument of pt2df as invoked within env_fitinit()
   logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]!=0 & 
-                                                 !lims[ptenv$names$notdone]
+                                                 !lims[ptenv$names$notdone] &
+                                                 lims['status'] == 1
                                                ,preds['radest',],NA)
                                         ,ptenv$names$radnames)
                                ,setNames(phi,ptenv$names$phinames),nsims=nsims);
