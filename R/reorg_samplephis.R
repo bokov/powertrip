@@ -558,8 +558,8 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # replace missing lims
       # TODO: maybe make preds_lims() less aggressive with NAs
       new.lims[c('min','max')] <- ifelse(is.na(new.lims[c('min','max')])
-                                         ,new.lims[c('min','max')]
-                                         ,lims[c('min','max')]);
+                                         ,lims[c('min','max')]
+                                         ,new.lims[c('min','max')]);
       hitrate <- mean(unlist(testtf),na.rm=T);
       # if failure due to too few or too many hits, force wider limits, add more
       # time, and try again
