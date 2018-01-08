@@ -283,7 +283,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
       ## equally representing predicted distances from reference point
       #quadrants <- lapply(data.frame(carts),sign);
       pmrads<-do.call(pmax,fp[,fnames]);
-      cuts<-cut(pmrads,quantile(pmrads,c(0,.5,.75,1)),include.lowest=T);
+      cuts<-cut(pmrads,quantile(pmrads,c(0,.5,.75,1),na.rm = T),include.lowest=T);
       #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
       # TODO: make topn (or frac-keep) configurable
       # DONE: calculate topn*2^-length(split(fp,quadrants)) and when that number exceeds 
@@ -487,6 +487,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   
   # for debugging
   logenv$state$phi_radius <- environment();
+  debugtriggerfunction <- function(xx) F;
   #on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
   #first_fail <- first_success <- T;
   # end debugging 
@@ -537,6 +538,8 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     if(class(preds)[1]=='try-error') browser();
     #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     new.lims <- preds_lims(preds,limit=maxrad,numse = numse,...);
+    # strictly temporary for debugging
+    if(length(new.lims) != 7) browser();
     # if the reason for failing is simply that it's too easy to detect a difference
     # lower the min lim and try again
     # TODO: dynamically calculated a hitrate cutoff midway between the target hitrate
@@ -544,17 +547,41 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     # The below code catches the case where a set of phis if failing because there
     # are not enough failures to detect... these seem to often be fixable by dropping
     # the lower bound to 0 and trying again
-    if(new.lims['status']==-1 || as.numeric((Sys.time()-t0),units='secs')>timeout){
+    timeout_reached <- F;
+    # if too much time has elapsed AND still no convergence, change status to failed
+    if(as.numeric(Sys.time()-t0,units='secs')>timeout && !new.lims['status']){
+      cat(' timeout '); timeout_reached <- T; new.lims['status'] <- -1;
+    }
+    # now for failed statuses regardless of whether due to timeout or non-convergence
+    # look for fixable cases
+    if(new.lims['status']==-1){
+      # replace missing lims
+      # TODO: maybe make preds_lims() less aggressive with NAs
+      new.lims[c('min','max')] <- ifelse(is.na(new.lims[c('min','max')])
+                                         ,new.lims[c('min','max')]
+                                         ,lims[c('min','max')]);
       hitrate <- mean(unlist(testtf),na.rm=T);
-      if(new.lims['min']>0 && hitrate>.9) new.lims[c('status','min')] <- 0 else new.lims['status'] <- -1;
-      if(hitrate<.1) {
-        if(new.lims['max']<maxrad) {
-          new.lims['max']<-maxrad; new.lims['status'] <- 0;
-        } else {
-          new.lims['status'] <- -1;
-          new.lims[logenv$names$notfailed] <- 1;
-          new.lims[logenv$names$notdone] <- 0;
-          }}};
+      # if failure due to too few or too many hits, force wider limits, add more
+      # time, and try again
+      if(hitrate>0.9 && new.lims['min']>0) {
+        new.lims['min']<-0; new.lims['status'] <- 0;
+        timeout <-2*timeout;
+        cat(' restarting with min=0 ');
+      } else if(hitrate<0.1 && new.lims['max']<maxrad) {
+        new.lims['max']<-maxrad; new.lims['status'] <- 0;
+        timeout <-2*timeout;
+        cat(' restarting with max=maxrad ');
+      } else if(any(oob<- preds['radest',]>maxrad)){
+        # if unrecoverable failure but with out-of-bounds (oob) prediction/s
+        # keep failure state but make the predictions visible to pt2df
+        new.lims[logenv$names$notfailed] <- pmax(oob,0,na.rm=T);
+        new.lims[logenv$names$notdone] <- 1 - new.lims[logenv$names$notfailed];
+        # might be a need for a new failure code but for now it be sufficient to
+        # distinguish the oob failures by the fact that they have individual 
+        # notfailed & done statuses combined with a global -1 status for the 
+        # phis
+      }
+    }
     lims <- new.lims;
     # when to give up on phis that take too long... currently set to 3 hours,
     # will dial down after observing the distribution of times
@@ -581,7 +608,9 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       file.remove(savetrigger);
       print('  File saved. ');
     }
-    if(file.exists(debugtrigger)){
+    # adding this so that debug is triggered by a particular condition rather
+    # than manually
+    if(file.exists(debugtrigger) || debugtriggerfunction(logenv)){
       browser();
     }
     if(file.exists(sourcepatch)) {
