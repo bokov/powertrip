@@ -1,1 +1,2 @@
+S3method("[",summary.ptenv)
 exportPattern("^[[:alpha:]]+")

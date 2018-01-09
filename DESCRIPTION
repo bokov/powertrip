@@ -4,7 +4,7 @@ Title: Analysis of longevity data.
 Version: 1.9.2.1
 Date: 2013-05-02
 URL: http://rforge.net/Survomatic/
-Depends: utils, survival, quantreg, SparseM, splines, eha, ggplot2 (>= 0.9.1), gridExtra, R (>= 2.6.0)
+Depends: utils, survival, quantreg, SparseM, splines, eha, ggplot2 (>= 0.9.1), gridExtra, R (>= 2.6.0), MASS, broom, dplyr,data.table,fields
 Author: Alex F. Bokov and Jonathan Gelfond
 Maintainer: Alex F. Bokov <bokov@uthscsa.edu>
 Description: Analyzes longevity data.
