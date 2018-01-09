@@ -758,9 +758,9 @@ powertrip<-function(logenv=logenv,refcoords
     }
     for(ii in seq_len(actualpoints)){
       deepassign(logenv,c('subsets',instance)
-                 ,philabel <- sprintf('%s_%04d',instance,phicycle),append=F);
+                 ,philabel <- sprintf('%s_%04d_%02d',instance,phicycle,ii),append=F);
       #if(console_log) cat(phicycle,'.',ii,'\t');
-      if(console_log) cat(sprintf('%s %02d ',substring(philabel,6),ii));
+      if(console_log) cat(sprintf('%s ',substring(philabel,6)));
       phi_radius(phi=unlist(phis[ii,phinames]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
                  ,refcoords = refcoords
                  ,pnlph=ptpnl_phisumm
