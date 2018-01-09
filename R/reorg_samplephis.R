@@ -739,6 +739,7 @@ powertrip<-function(logenv=logenv,refcoords
   phicycle <- c(logenv$state$phicycle,0)[1]+1;
   # export final phicycle when exiting
   #on.exit(logenv$state$phicycle<-phicycle);
+  logenv$state$call <- match.call();
 
   while(phicycle < maxphicycle){
     if(file.exists(topsourcepatch)) {
@@ -755,12 +756,9 @@ powertrip<-function(logenv=logenv,refcoords
       #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
       actualpoints <- nrow(phis);
     }
-    logenv$subsets[[instance]] <- list();
-    attr(logenv$subsets[[instance]],call) <- logenv$state$call <- match.call();
-    # DEBUG BREAK
-    #debugonce(make_phis);
     for(ii in seq_len(actualpoints)){
-      logenv$subsets[[instance]][[length(logenv$subsets[[instance]])]] <- philabel <- sprintf('%s_%04d',instance,phicycle);
+      deepassign(logenv,c('subsets',instance)
+                 ,philabel <- sprintf('%s_%04d',instance,phicycle),append=F);
       #if(console_log) cat(phicycle,'.',ii,'\t');
       if(console_log) cat(sprintf('%s %02d ',substring(philabel,6),4));
       phi_radius(phi=unlist(phis[ii,phinames]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
