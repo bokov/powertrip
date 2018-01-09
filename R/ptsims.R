@@ -147,6 +147,7 @@ ptpnl_qntile <- new.ptpnl("qntile"
 ptpnl_simsumm <- new.ptpnl('simsm'
                               ,fit = split(data.frame(data),data.frame(data)[,1])
                               ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)));
+# TODO: write a version of ptpnl_simsumm that also does integrals under survival curve at certain timepoints (e.g. 480 and 1080 months)
                               
 ptpnl_phisumm <- new.ptpnl('summ'
                            ,fit=c()
