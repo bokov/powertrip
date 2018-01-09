@@ -628,7 +628,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   };
   pnlph(ppdat,preds['radest',],logenv=logenv,time=as.numeric(Sys.time()-t0,units='secs'));
   if(lims['status']==1){
-    cat('Success: ');
+    cat(':) ');
     #if(first_success){first_success<-F; browser();}
     #for(pp in pnfit[preds['conv',]==1]) {
     # it's not enough to test for convergence-- we have to also make sure the 
@@ -645,7 +645,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # we need to iterate over all the summary-only non-verdict functions for each of these datasets
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
-  } else cat('Failure: ');    #if(first_fail){first_fail<-F; browser();}}
+  } else cat(':( ');    #if(first_fail){first_fail<-F; browser();}}
   logenv$allpoints[[philabel]] <- data.table(rad=testrd,rbind(phi),testtf);
   if(isTRUE(logenv$state$powertrip$console_log)) cat('radii= ',try(preds['radest',]),'\tphi= ',try(phi),'\tlims= ',c(maxrad,lims[-3]),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
