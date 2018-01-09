@@ -65,15 +65,61 @@ crt2pol<-function(xx,...) {
   oo2<-ifelse(xx[,3]<0,oo1[,nx-1]*-1+2*pi,oo1[,nx-1]);
   cbind(rad=sqrt(rowSums(xx^2)),phi=cbind(oo1[,-nx+1],oo2))}
 
-# creates an n-dimensional normal distribution (not just surface shell)
-gencartnorm<-function(maxs,mins,nn=100,...){
-  lmx<-length(maxs); lmn<-length(mins);
-  if(lmx==1&lmn==1) stop('maxs and mins should be equally sized vectors greater than 1 in lenght');
-  if(lmn!=lmx&&min(c(lmn,lmx))>1) stop('maxs and mins should be the same length');
-  locscale<- rbind(location=(maxs + mins)/2, scale=(maxs - mins)/2); 
-  ll <- max(lmn,lmx); lidx <- 1:ll;
-  oo <- apply(locscale,2,function(xx) rnorm(nn)*xx[2]+xx[1]);
+
+#' gencart: generate an data.frame of random values in Cartesian space
+#'
+#' @param vals an `alist` of values or expressions... *should be in the order 
+#' in which they need to be evaluated, not the order in the order you want them
+#' to appear in the final output*. These functions can reference not only 
+#' previously created columns (if vals has no names then by default X1, X2, etc.) 
+#' but they can also reference `mn` (the values of `mins[ii]` where `ii`` is the 
+#' current column), `mx` which is the same but for `maxs[ii]`, `nn` which is the 
+#' `nn` argument (below) and any additional named arguments in `...`
+#' @param order a vector of names or column numbers the same length as vals
+#' @param maxs  a vector of maximum values, same length as vals and order
+#' @param mins  a vector of minimum values, same length as vals and order
+#' @param nn    single integer, the number of rows to create
+#' @param ...   additional optional arguments to be available to the expressions
+#' within `vals`
+#'
+#' @return A `data.frame` of random values generated as specified by vals
+#' @export
+#'
+#' @examples
+gencart <- function(vals,order
+                    ,maxs=rep_len(1,length(vals)),mins=rep_len(-1,length(vals))
+                    ,nn=100,...){
+  colnums<-seq_len(ncol <- length(vals));
+  if(is.null(names(vals))) names(vals)<-make.names(colnums);
+  colnames<-names(vals);
+  if(missing(order)) order <- colnums else {
+    if(length(order)!=ncol) stop("The order argument must be the same length as the 'vals' argument.");
+    if(length(unique(order))!=ncol) stop("All values in the 'order' argument should be unique")
+    if(is.character(order)&&length(intersect(order,names(vals)))<ncol) stop("If you use a character vector as your 'order' argument then 'vals' must have names and they must have a one-to-one correspondence to 'order'");
+  }
+  if(length(maxs)!=ncol||length(mins)!=ncol) stop("The 'maxs' and 'mins' arguments must be numeric vectors the same length as 'vals'");
+  oo <- c(as.list(substitute(list(...)))[-1],nn=nn);
+  for(ii in colnums){
+    oo[[colnames[ii]]]<-eval(vals[[ii]],env=c(oo,mx=maxs[ii],mn=mins[ii],col=ii));
+  }
+  data.frame(tail(oo,ncol))[,order];
 }
+
+# small wrapper around gencart()
+gencartnorm <- function(maxs,mins,nn=100,...){
+  gencart(rep_len(alist(rnorm(nn,mean=(mn+mx)/2,sd=abs(mn-mx)/2)),length(maxs))
+          ,maxs=maxs,mins=mins,nn=nn,...);
+}
+
+# # creates an n-dimensional normal distribution (not just surface shell)
+# gencartnorm<-function(maxs,mins,nn=100,...){
+#   lmx<-length(maxs); lmn<-length(mins);
+#   if(lmx==1&lmn==1) stop('maxs and mins should be equally sized vectors greater than 1 in lenght');
+#   if(lmn!=lmx&&min(c(lmn,lmx))>1) stop('maxs and mins should be the same length');
+#   locscale<- rbind(location=(maxs + mins)/2, scale=(maxs - mins)/2); 
+#   ll <- max(lmn,lmx); lidx <- 1:ll;
+#   oo <- apply(locscale,2,function(xx) rnorm(nn)*xx[2]+xx[1]);
+# }
 
 # creates cartesian coordinates for a box defined by the maxs and mins, with the
 # points along each face uniformly distributed
