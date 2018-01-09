@@ -104,29 +104,29 @@ env_fitinit <- function(logenv,...){
   # obtain the updated data we will need
   logenv$fits$radsphis <- pt2df(ptenv=logenv,fields=logenv$names$fields);
   # here is why we needed rads, phis, and nsims...
-  with(logenv$fits,{
-    #logenv$fits$radnames <- radnames <- grep('^rad\\.',names(radsphis),val=T);
-    #logenv$fits$phinames <- phinames <- grep("^phi[0-9]+$",names(logenv$fits$radsphis),val=T);
-    # formula for modeling number of simulations needed to converge as a function 
-    # of angle. This will get updated to create all the formulas for predicting
-    # the radii for the respective ptpnl_ functions
-    nsimsfrm<-update(as.formula(paste('nsims~('
-                                      ,paste0(sprintf('%1$s+cos(%1$s)+sin(%1$s)',logenv$names$phinames)
-                                              ,collapse='+'),')^2')),.~.);
-    logenv$fits$frms <- frms <- c(nsims=nsimsfrm
-                                ,sapply(logenv$names$radnames
-                                        ,function(xx) update(nsimsfrm
-                                                             ,as.formula(paste0(xx,'~.')))));
-  logenv$fits$models <- sapply(frms,function(xx) {
-      oo<-lm(formula=xx,logenv$fits$radsphis); oo$call$formula <- xx; oo;
-      },simplify=F);
-  });
+  # with(logenv$fits,{
+  #   #logenv$fits$radnames <- radnames <- grep('^rad\\.',names(radsphis),val=T);
+  #   #logenv$fits$phinames <- phinames <- grep("^phi[0-9]+$",names(logenv$fits$radsphis),val=T);
+  #   # formula for modeling number of simulations needed to converge as a function 
+  #   # of angle. This will get updated to create all the formulas for predicting
+  #   # the radii for the respective ptpnl_ functions
+  #   nsimsfrm<-update(as.formula(paste('nsims~('
+  #                                     ,paste0(sprintf('%1$s+cos(%1$s)+sin(%1$s)',logenv$names$phinames)
+  #                                             ,collapse='+'),')^2')),.~.);
+  #   logenv$fits$frms <- frms <- c(nsims=nsimsfrm
+  #                               ,sapply(logenv$names$radnames
+  #                                       ,function(xx) update(nsimsfrm
+  #                                                            ,as.formula(paste0(xx,'~.')))));
+  # logenv$fits$models <- sapply(frms,function(xx) {
+  #     oo<-lm(formula=xx,logenv$fits$radsphis); oo$call$formula <- xx; oo;
+  #     },simplify=F);
+  # });
 };
 
 #' To run each time a new set of phis has been completed
 env_fitupdt <- function(logenv,...){
   logenv$fits$radsphis <- pt2df(ptenv = logenv,fields=logenv$names$fields,...);
-  logenv$fits$models <- sapply(logenv$fits$models,update,data=logenv$fits$radsphis,simplify=F);
+  #logenv$fits$models <- sapply(logenv$fits$models,update,data=logenv$fits$radsphis,simplify=F);
 };
 
 #' To get predictions
@@ -357,7 +357,7 @@ pt2df <- function(ptenv,summname='summ'
   # to the default fields below add in maxrad=maxrad next time logenv is rebuilt
   fields <- c(fields,dots);
   rows <- sapply(ptenv$coords
-                 ,function(xx) with(xx[[summname]][[1]],do.call('c',fields))
+                 ,function(xx) with(tail(xx[[summname]])[[1]],do.call('c',fields))
                  ,simplify=F);
   if(length(unique(sapply(rows,length)))){
     oo <- bind_rows(lapply(rows,function(xx) data.frame(rbind(xx))),.id='ID');
@@ -478,7 +478,8 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
                        ,pneval=sapply(pnlst,attr,which='eval')
                        ,pnfit=names(pneval)[pneval]
                        ,pninfo=names(pneval)[!pneval]
-                       ,philabel=paste0('phi_',paste0(round(phi,3),collapse='_'))
+                       ,instance='phi_'
+                       ,philabel=paste0(instance,paste0(round(phi,3),collapse='_'))
                        ,logenv=logenv,nrads=20
                        ,max=maxrad,min=0,numse=1.5
                        ,ptsim=ptsim_nlin
@@ -697,6 +698,7 @@ powertrip<-function(logenv=logenv,refcoords
                     # an automatic off-switch, so we will have maxphicycle
                     # if we do need literally indefinite runtime just set 
                     # this to Inf
+                    ,instance=as.character(Sys.time(),'i%Y%m%d%I%M%OS3')
                     ,maxphicycle=1e6,...){
   #phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
   # trying more regularly spaced phis, to get a handle on the weird output
@@ -732,7 +734,6 @@ powertrip<-function(logenv=logenv,refcoords
   
   # The below is a catch-all way to do runtime patches to most arguments
   logenv$state$powertrip <- environment();
-  logenv$state$call <- match.call();
   console_log <- T;
   # Increment phicycle from previous run by 1 if it exists, otherwise start with 1
   phicycle <- c(logenv$state$phicycle,0)[1]+1;
@@ -754,13 +755,19 @@ powertrip<-function(logenv=logenv,refcoords
       #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
       actualpoints <- nrow(phis);
     }
+    logenv$subsets[[instance]] <- list();
+    attr(logenv$subsets[[instance]],call) <- logenv$state$call <- match.call();
     # DEBUG BREAK
     #debugonce(make_phis);
     for(ii in seq_len(actualpoints)){
-      if(console_log) cat(phicycle,'\t',ii,'\t');
+      logenv$subsets[[instance]][[length(logenv$subsets[[instance]])]] <- philabel <- sprintf('%s_%04d',instance,phicycle);
+      #if(console_log) cat(phicycle,'.',ii,'\t');
+      if(console_log) cat(sprintf('%s %02d ',substring(philabel,6),4));
       phi_radius(phi=unlist(phis[ii,phinames]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
                  ,refcoords = refcoords
                  ,pnlph=ptpnl_phisumm
+                 ,instance=instance
+                 ,philabel = philabel
                  ,pneval=pneval_,pnfit=pnfit,pninfo=pninfo
                  ,logenv=logenv,max=phis[ii,'maxs'],min=phis[ii,'mins'],nrads=nrads
                  ,numse=numse
