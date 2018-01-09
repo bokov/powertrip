@@ -698,7 +698,7 @@ powertrip<-function(logenv=logenv,refcoords
                     # an automatic off-switch, so we will have maxphicycle
                     # if we do need literally indefinite runtime just set 
                     # this to Inf
-                    ,instance=as.character(Sys.time(),'i%Y%m%d%I%M%OS1')
+                    ,instance=as.character(Sys.time(),'i%y%m%d%I%M%OS1')
                     ,maxphicycle=1e6,...){
   #phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
   # trying more regularly spaced phis, to get a handle on the weird output
