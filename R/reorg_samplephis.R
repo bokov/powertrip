@@ -285,7 +285,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
       pmrads<-do.call(pmax,c(fp[,fnames],na.rm=T));
       cuts<-cut(pmrads,quantile(pmrads,c(0,.5,.75,1),na.rm = T),include.lowest=T);
       #snames <- logenv$names$snames; fnames <- logenv$names$fnames;
-      # TODO: make topn (or frac-keep) configurable
+      # DONE: make topn (or frac-keep) configurable
       # DONE: calculate topn*2^-length(split(fp,quadrants)) and when that number exceeds 
       # the number of records for a quadrant, keep all of them, otherwise rank them within the quadrant
       # and output the filter to unsplit
@@ -597,7 +597,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     # the first cycle when glm fails for all panel functions regardless of why.
     # TODO: this doesn't go far enough-- find a way to detect > X% NAs in the 
     #       verdicts and also disqualify. Perhaps within the panel function
-    # TODO: this may run too long-- set a cycle-limit exceeding which would also 
+    # DONE: this may run too long-- set a cycle-limit exceeding which would also 
     #       end the attempt to estimate the radius for these phis
     # DONE: implement logging at the phi level-- don't retain model results or 
     #       stats about the current simulated dataset, just the global part of 
@@ -654,13 +654,13 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
   # DONE: for prioritizing phis, also model the runtime to get most uncertainty
   #       per second of runtime or per simulation
-  # TODO: also, model the 'dead-zones' -- places where we had to give up --
+  # DONE?:: also, model the 'dead-zones' -- places where we had to give up --
   #       and exclude them
   # DONE?: figure out why negative radii are being allowed and fix
   # DONE?: figure out why plots look so wierd... is pol2crt wrong?
   # DONE: finalize outer function
   # DONE?: launch the linear model version
-  # TODO: try to resurrect simsurve and survwrapper
+  # DONE: try to resurrect simsurve and survwrapper
 }
 
 #' Sobering thought: right now this averages about 0.006 seconds per simulation
@@ -711,7 +711,7 @@ powertrip<-function(logenv=logenv,refcoords
   pneval_ <- sapply(pnlst,attr,'eval');
   # maybe this is a good place to initialize logenv for use everywhere else in powertrip
   # so we don't have to keep deriving names in multiple places or passing around too many arguments
-  # TODO: consider this being a function with access to its calling environment?
+  # DONE: consider this being a function with access to its calling environment?
   # names of the functions in pnlist that each return a TRUE/FALSE verdict
   logenv$names$pnfit <- pnfit <- names(pneval_)[pneval_];
   # names of the other functions in pnlist that produce summary statistics for each simulated population

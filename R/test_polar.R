@@ -507,7 +507,7 @@ samplephis <- function(dataenv,logenv=new.env(),errenv=new.env()
 #' First, create the dataenv
 # foo<-samplephis(maxs=maxs,mins=mins);
 #' Sample from a polar space immediately converting to cartesian
-#' TODO: create a sample_polar function
+#' DONE?: create a sample_polar function
 #thetas<-cbind(theta=runif(1000,0,2*pi));
 #ii <- 3;
 #ban <- (cbind(rlim=apply(thetas,1,pollim,maxs=maxs,mins=mins),theta=thetas));

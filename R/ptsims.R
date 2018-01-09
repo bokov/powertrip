@@ -142,7 +142,7 @@ ptpnl_qntile <- new.ptpnl("qntile"
                           , fit = quantile(data[, 1], c(0.05, 0.1, 0.5, 0.9, 0.95))
                           , result = list(summary = fit, coords = coords, call = match.call(expand.dots = T)));
 
-# TODO: ptpnl_popsummary, ptpnl_phisummary
+# DONE: ptpnl_popsummary, ptpnl_phisummary
 
 ptpnl_simsumm <- new.ptpnl('simsm'
                               ,fit = split(data.frame(data),data.frame(data)[,1])
