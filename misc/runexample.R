@@ -9,10 +9,12 @@ if(file.exists(logenv_file)){
   pnlst_gmcx <- list(cx=ptpnl_sr,gm=ptpnl_gm,sims=ptpnl_simsumm);
 }
 lrefcoords<-log(refcoords<-c(3.02495622562167e-06,0.00766970877053115,1.97042457165941e-05));
-# phicycle XXX: expanding to... c(0.000448943309591518, 0.0195827842383701, 0.058737528647514)
 lrelmaxs<-((lmaxs<-log(maxs <- c(1e-04, 0.0195827842383701, 0.001145822)))-lrefcoords);
-# phicycle XXX: expanding to ... c(1.01475976473711e-09, 0.00103798220880217, 1e-16)
+# phicycle XXX: expanding maxs to... 
+#lrelmaxs<-((lmaxs<-log(maxs <- c(0.000448943309591518, 0.0195827842383701, 0.058737528647514);
 lrelmins<-((lmins<-log(mins <- c(2.29371429246515e-08, 0.00445842550313631, 1e-16)))-lrefcoords);
+# phicycle XXX: expanding to mins to... 
+#lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00103798220880217, 1e-16)))-lrefcoords);
 .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
                   ,backtrans=exp,type='gm',tol=0.1);
