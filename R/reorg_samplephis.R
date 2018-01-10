@@ -533,7 +533,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       pol2crt(cbind(
         # save untransformed randomly generated radians for later
         # if we sample a root of a runif, less biased toward small distances
-        # used to be 0.75, but this may cause 'fading' at the edges maxrad, so need
+        # used to be 0.75, but this may cause 'fading' at the edges of maxrad, so need
         # to increase the exponent to 0.9
         list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])^0.9
         # turn the static coordinate vector into matrix with one column for each
