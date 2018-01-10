@@ -99,6 +99,27 @@ range.data.frame <- function(df,...){
   oo;
 }
 
+# model-specific point-clouds
+#' Title
+#'
+#' @param ptenv  A summary.ptenv object
+#' @param paramnames
+#'
+#' @return  A `list` with a `data.frame` for each member of `ptenv$logenv$names$pnfit`
+#' (i.e. the verdict-returning members of the pnlst panel in `powertrip`)
+#' @export
+#'
+#' @examples
+getresults<-function(ptenv,paramnames,...){
+  pnfit <- ptenv$logenv$names$pnfit;
+  oo <- list();
+  # ugh, argument-magic comes back to bite me
+  eval(parse(text=sprintf("oo$%1$s<-d0[c('ok','s.rad.%1$s'),c('p.rad.%1$s','c.rad.%1$s','ID')];
+                          rownames(oo$%1$s)<-oo$%1$s$ID;",pnfit)));
+  if(!missing(paramnames)) for(ii in names(oo)) colnames(oo[[ii]])[seq_along(paramnames)]<-paramnames;
+  oo;
+}
+
 # lazy 3d plotting
 # which: name of a radial variable (maxrad, lims.max, lims.min, or one of the model radii)
 # subset : something that can be passed to the subset argument of subset.summary.ptenv()
