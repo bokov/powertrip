@@ -523,6 +523,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     # at 1.17e-6 we start sampling radii so close to each other that glm() errors
     # this is to prevent that
     if(abs(diff(lims[c('min','max')]))<1e-5) {
+      cat(' widening lims ')
       lims['min'] <- lims['min']/2;
       lims['max']<-median(c(lims['max'],maxrad));
     }
@@ -532,7 +533,9 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       pol2crt(cbind(
         # save untransformed randomly generated radians for later
         # if we sample a root of a runif, less biased toward small distances
-        list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])^0.75
+        # used to be 0.75, but this may cause 'fading' at the edges maxrad, so need
+        # to increase the exponent to 0.9
+        list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])^0.9
         # turn the static coordinate vector into matrix with one column for each
         # phi and nrads rows
         ,rbind(phi)[rep_len(1,nrads),])));
