@@ -493,7 +493,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
                        # name of file that will be sourced (once and then moved) if found
                        ,sourcepatch=paste0(wd,'pt_sourcepatch.R')
                        ,phicycle=0,backtrans=identity
-                       ,timeout=600 # how many seconds to try on a given phi-set before giving up
+                       ,timeout=180 # how many seconds to try on a given phi-set before giving up
                        ,...){
   # The function which will plug the above modules into each other and test them
   # jointly

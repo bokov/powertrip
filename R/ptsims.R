@@ -281,11 +281,11 @@ getCall.ptpnl_fn <- function(xx,...) attr(xx,'call');
 # }
 # 
 #' 
-ptpnl_passthru.bak <- function(data,coords=NULL,...){
-  list(outcome=data
-       ,coords=coords
-       ,call=sys.call(sys.parent()));
-}
+# ptpnl_passthru.bak <- function(data,coords=NULL,...){
+#   list(outcome=data
+#        ,coords=coords
+#        ,call=sys.call(sys.parent()));
+# }
 
 ptpnl_2lin <- function(data,coords=NULL,termrxp='group',sig=0.05,...){
   fits <- list(add=try(lm(yy~.,data))
