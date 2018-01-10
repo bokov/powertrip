@@ -495,23 +495,9 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
                        ,phicycle=0,backtrans=identity
                        ,timeout=180 # how many seconds to try on a given phi-set before giving up
                        ,...){
-  # The function which will plug the above modules into each other and test them
-  # jointly
-  
-  # for debugging
   logenv$state$phi_radius <- environment();
   debugtriggerfunction <- function(xx) F;
   #on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
-  #first_fail <- first_success <- T;
-  # end debugging 
-
-  # First determine which functions in pnlst are evaluable (i.e retrun verdicts 
-  # rather than just summary statistics)
-  # obtain the maximum allowed radius for the current phis
-  # (derived from the cartesian limits maxs and mins)
-  #if(missing(maxrad)) maxrad<-pollim(phi,maxs=maxs,mins=mins);
-  # lenght of current verdicts
-  #nntf <- length(list_tfresp);
   tmpsave<-paste0(savefile,'.tmp');
   cycle <- 1;
   lims <- c(min=min,max=max,status=0);
