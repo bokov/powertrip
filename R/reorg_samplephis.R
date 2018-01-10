@@ -174,7 +174,7 @@ env_fitpred <- function(logenv,newdata
                                                       #,Distance='rdist.earth'
                                                       #,cov.args=list(R=1)
                                                       #,lambda=lambda,theta=theta
-                                                      ),simplify=F));
+                                                      )),simplify=F);
   if(any(sapply(krigs,is,'try-error'))) {cat('At least one of the krigs failed'); browser();}
   cat('Predicting...\n');
   preds <- lapply(krigs,predict,newdata[,phinames]);
