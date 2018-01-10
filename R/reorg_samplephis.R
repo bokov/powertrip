@@ -156,11 +156,30 @@ env_fitpred <- function(logenv,newdata
   radsphis <- subset(logenv$fits$radsphis,subset=subset)[,c(radnames,phinames)];
   if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
   pmaxs <- do.call(pmax,c(radsphis[,radnames],na.rm=T));
+  # remove all the cases where ALL ptpnl_ functions have NA radii
+  # but not just one-- because we *expect* different ptpnl_ functions to fail
+  # under conditions that are different from each other and those cases will 
+  # likely be of practical interest
   radsphis<-radsphis[!is.na(pmaxs),]; pmaxs<-pmaxs[!is.na(pmaxs)];
+  # possibly figured out the damn mKrig/Choleski problem... NON UNIQUE PREDICTORS
+  # WTF, seriously? I thought replication was a good thing?! Okay, so we'll try
+  # retaining only the last value when all phis have identical values. That's why
+  # the earlier data.table() enhancement was done to pt2df a few minutes ago.
+  #
+  # Initialize the index
+  setkeyv(radsphis,phinames);
+  # This magic spell keeps the last non-NA entry for each pair of phinames... now
+  # we will have no duplicates and as a bonus a lower proportion of missing values
+  # Because the data tends to accumulate chronologically, the latest in a series 
+  # of duplicates ought be the best. Here .SD represents all columns, lastnotna
+  # is defined in this package, and phinames was set as the key columns above.
+  radsphis<-radsphis[,lapply(.SD,lastnotna),by=phinames];
+  # now back to sampling, etc.
   predsample<-seq_len(nrecords <- nrow(radsphis));
   if(nrecords>2000) {
     # experimental, for weighted sampling
     # here is a version that tilts the sampling away from close-to-origin values:
+    # NOTE: will no longer work as written here, due to forcing uniqueness
     # predsample <- sample(predsample,2000,rep=F,prob=ifelse(pmaxs>quantile(pmaxs,.75,na.rm=T),7,1));
     predsample<-sample(predsample,2000,rep=F);
   }
@@ -362,6 +381,10 @@ make_phis() being set to TRUE, and it is being ignored."
     oo$mins <- 0; oo$maxs <- oo$maxrad};
   oo; #cbind(oo,maxrad);
 }
+
+#' Simply take the last non-missing value from a vector. WTF is this not already
+#' an option to tail()?
+lastnotna <- function(xx) tail(c(NA,na.omit(xx)),1);
 
 #' Any arguments in ... are treated as expressions to evaluate in the context of
 #' ptenv$coords[[XXX]][[summname]]
