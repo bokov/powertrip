@@ -277,7 +277,14 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
   # temporary note: this was hotpatched on phicycle 46 of local instance
   oo[,'maxrad'] <- apply(oo[,-1],1,pollim,maxs=maxs,mins=mins); 
   if(!fresh){
-    fp <- env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad,...);
+    fp <- try(env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad,...));
+    attempt<-0;
+    while(is(fp,'try-error')&&attempt<3){
+      cat('\nRetrying env_fitpred()\n');
+      fp <- try(env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad,...));
+      attempt<-attempt+1;
+    }
+    if(is(fp,'try-error')){cat('fit_pred() failed again, debbugging\n'); browser();}
     if(topn>0){
       ## instead of equally representing each quadrant, a more sensible approach is
       ## equally representing predicted distances from reference point
