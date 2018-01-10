@@ -82,7 +82,14 @@ gencart <- function(vals,order
 
 # small wrapper around gencart()
 gencartnorm <- function(maxs,mins,nn=100,...){
-  gencart(rep_len(alist(rnorm(nn,mean=(mn+mx)/2,sd=abs(mn-mx)/2)),length(maxs))
+  # the below used to be have abs(mn-mx)/2 and that was not the correct scaling--
+  # that was closer to 3 sd, so now it's /6. This may have been causing the 
+  # kriging Cholesky decomposition errors maybe? Or perhaps clustering in arbitrary
+  # parts of the param space... on the other hand, the original thinking was to 
+  # let the tails of the normal distros overlap at the edges of the bounding cube
+  # so we are not too concentrated on its faces... maybe split the difference and have
+  # it be /4 if this doesn't make things better?
+  gencart(rep_len(alist(rnorm(nn,mean=(mn+mx)/2,sd=abs(mn-mx)/6)),length(maxs))
           ,maxs=maxs,mins=mins,nn=nn,...);
 }
 

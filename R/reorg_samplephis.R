@@ -155,10 +155,11 @@ env_fitpred <- function(logenv,newdata
   if(example) return(summary(logenv$fits$radsphis[,phinames]));
   radsphis <- subset(logenv$fits$radsphis,subset=subset)[,c(radnames,phinames)];
   if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
+  pmaxs <- do.call(pmax,c(radsphis[,radnames],na.rm=T));
+  radsphis<-radsphis[!is.na(pmaxs),]; pmaxs<-pmaxs[!is.na(pmaxs)];
   predsample<-seq_len(nrecords <- nrow(radsphis));
   if(nrecords>2000) {
     # experimental, for weighted sampling
-    pmaxs <- do.call(pmax,c(logenv$fits$radsphis[,phinames],na.rm=T));
     # here is a version that tilts the sampling away from close-to-origin values:
     # predsample <- sample(predsample,2000,rep=F,prob=ifelse(pmaxs>quantile(pmaxs,.75,na.rm=T),7,1));
     predsample<-sample(predsample,2000,rep=F);
@@ -166,21 +167,25 @@ env_fitpred <- function(logenv,newdata
   cat('Kriging...\n');
   trfun <- if(logpred) log else identity;
   invfun <- if(logpred) exp else identity;
-  krigs <- sapply(radnames,function(xx) fields::mKrig(radsphis[predsample,phinames]
+  krigs <- try(sapply(radnames,function(xx) fields::mKrig(radsphis[predsample,phinames]
                                                       ,trfun(radsphis[[xx]][predsample]),na.rm=T
                                                       # experimental, commented out for running instances
                                                       #,cov.function='stationary.taper.cov'
                                                       #,Distance='rdist.earth'
                                                       #,cov.args=list(R=1)
                                                       #,lambda=lambda,theta=theta
-                                                      ),simplify=F);
+                                                      ),simplify=F));
+  if(is(krigs,'try-error')) browser();
+  cat('Predicting...\n');
   preds <- lapply(krigs,predict,newdata[,phinames]);
+  cat('Confidence intervals...\n');
   ses <- lapply(krigs,predictSE,newdata[,phinames]);
   oo <- invfun(do.call(data.frame,c(setNames(preds,logenv$names$fnames),setNames(ses,logenv$names$snames))));
   #oo<-do.call(data.frame,sapply(logenv$fits$models
   #                          ,function(xx) with(predict(xx,newdata=newdata,se=T)
   #                                             ,cbind(fit=fit,se=se.fit)),simplify=F));
   if(!is.null(maxrad)){
+    cat('Filtering on maximum radius...\n');
     #fnames<-paste0(logenv$fits$radnames,'.fit');
     #snames<-paste0(logenv$fits$radnames,'.se');
     #ex <- apply(oo[,fnames<-paste0(logenv$fits$radnames,'.fit'),drop=F],2,function(xx) xx<0|xx>maxrad);
@@ -190,6 +195,7 @@ env_fitpred <- function(logenv,newdata
     # apparently especially with small samples you can get negative nsims!
     #oo$nsims.fit[oo$nsims.fit<0] <- NA;
   }
+  cat('Done.\n');
   oo;
 };
 
@@ -715,6 +721,10 @@ powertrip<-function(logenv=logenv,refcoords
   # alist to be used in the fields argument of pt2df as invoked within env_fitinit()
   logenv$names$fields <- alist(setNames(ifelse(lims[ptenv$names$notfailed]!=0 & 
                                                  !lims[ptenv$names$notdone] &
+                                                 # the below condition is an empirical
+                                                 # sanity check to hopefully prevent 
+                                                 # Cholesky decomposition errors in mKrig
+                                                 preds['radest',]< 200 &
                                                  lims['status'] == 1
                                                ,preds['radest',],NA)
                                         ,ptenv$names$radnames)
