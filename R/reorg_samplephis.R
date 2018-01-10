@@ -380,7 +380,7 @@ pt2df <- function(ptenv,summname='summ'
   if(length(unique(sapply(rows,length)))){
     oo <- bind_rows(lapply(rows,function(xx) data.table(rbind(xx))),.id='ID');
     warning('pt2df(): rows of unequal length, doing it the slow way.')
-  } else oo<-data.table(t(do.call(rbind,rows)));
+  } else {oo<-data.table(t(do.call(rbind,rows))); oo$ID<-rownames(oo)} 
   cat('Read',nrow(oo),'rows,',ncol(oo),'columns.\n');
   oo;
 }
