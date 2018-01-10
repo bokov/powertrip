@@ -194,12 +194,12 @@ env_fitpred <- function(logenv,newdata
                                                       #,cov.args=list(R=1)
                                                       #,lambda=lambda,theta=theta
                                                       )),simplify=F);
-  if(any(kstate<-sapply(krigs,is,'try-error'))) {
-    cat('At least one of the krigs failed');
-    deepassign(logenv,'badsamples',list(kstate=kstate,radsphis=radsphis[predsample,]));
-    save(logenv,file=basename(logenv$state$powertrip$savefile));
-    browser();
-    } else deepassign(logenv,'goodsamples',list(kstate=c(T,T),radsphis=radsphis[predsample,]));
+  # if(any(kstate<-sapply(krigs,is,'try-error'))) {
+  #   cat('At least one of the krigs failed');
+  #   deepassign(logenv,'badsamples',list(kstate=kstate,radsphis=radsphis[predsample,]));
+  #   save(logenv,file=basename(logenv$state$powertrip$savefile));
+  #   browser();
+  #   } else deepassign(logenv,'goodsamples',list(kstate=c(T,T),radsphis=radsphis[predsample,]));
   cat('Predicting...\n');
   preds <- lapply(krigs,predict,newdata[,phinames]);
   cat('Confidence intervals...\n');
