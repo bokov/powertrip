@@ -153,9 +153,9 @@ env_fitpred <- function(logenv,newdata
     stop('logenv must contain valid phinames, snames, fnames, and radnames vectors inside its names list so we know which columns to use');
   }
   if(example) return(summary(logenv$fits$radsphis[,phinames]));
-  radsphis <- subset(logenv$fits$radsphis,subset=subset)[,c(radnames,phinames)];
-  if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames];
-  pmaxs <- do.call(pmax,c(radsphis[,radnames],na.rm=T));
+  radsphis <- subset(logenv$fits$radsphis,subset=subset)[,c(radnames,phinames),with=F];
+  if(missing(newdata)) newdata <- logenv$fits$radsphis[,phinames,with=F];
+  pmaxs <- do.call(pmax,c(radsphis[,radnames,with=F],na.rm=T));
   # remove all the cases where ALL ptpnl_ functions have NA radii
   # but not just one-- because we *expect* different ptpnl_ functions to fail
   # under conditions that are different from each other and those cases will 
@@ -186,7 +186,7 @@ env_fitpred <- function(logenv,newdata
   cat('Kriging...\n');
   trfun <- if(logpred) log else identity;
   invfun <- if(logpred) exp else identity;
-  krigs <- sapply(radnames,function(xx) try(fields::mKrig(radsphis[predsample,phinames]
+  krigs <- sapply(radnames,function(xx) try(fields::mKrig(radsphis[predsample,phinames,with=F]
                                                       ,trfun(radsphis[[xx]][predsample]),na.rm=T
                                                       # experimental, commented out for running instances
                                                       #,cov.function='stationary.taper.cov'
