@@ -613,7 +613,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   };
   pnlph(ppdat,preds['radest',],logenv=logenv,time=as.numeric(Sys.time()-t0,units='secs'));
   if(lims['status']==1){
-    cat(':) ');
+    cat('OK ');
     # it's not enough to test for convergence-- we have to also make sure the 
     # converged results fall within the limits. Not and-ing the below with the
     # convergence criteria because IIRC for us to even get this far, they both
@@ -628,10 +628,10 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # we need to iterate over all the summary-only non-verdict functions for each of these datasets
       for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
     };
-  } else cat(':( ');    #if(first_fail){first_fail<-F; browser();}}
+  } else cat('!! ');    #if(first_fail){first_fail<-F; browser();}}
   logenv$allpoints[[philabel]] <- data.table(rad=testrd,rbind(phi),testtf);
   if(isTRUE(logenv$state$powertrip$console_log)) cat(
-    'rad=',try(round(preds['radest',]),3),'\tphi=',try(round(phi,3))
+    'rad=',try(round(preds['radest',],3)),'\tphi=',try(round(phi,3))
     ,'\tmax=',round(maxrad,3),'\tlim=',round(c(lims[-3]),3),'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
