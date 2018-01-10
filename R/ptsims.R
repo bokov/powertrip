@@ -165,6 +165,7 @@ ptpnl_phisumm <- new.ptpnl('summ'
                                        ,lastsim=summary(rbind(callingframe$iidat,NA))
                                        # subtract 1 from the first and last fields
                                        ,testtf=table(interaction(rbind(callingframe$testtf,T,F)))
+                                       ,ts=Sys.time()
                                        ,time=time))
 );
 #' NOTE: avoid creating variables that match the regexp "^phi[0-9]$" because 
