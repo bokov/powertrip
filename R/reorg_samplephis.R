@@ -631,8 +631,10 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   } else cat('!! ');    #if(first_fail){first_fail<-F; browser();}}
   logenv$allpoints[[philabel]] <- data.table(rad=testrd,rbind(phi),testtf);
   if(isTRUE(logenv$state$powertrip$console_log)) cat(
-    'rad=',try(round(preds['radest',],3)),'\tphi=',try(round(phi,3))
-    ,'\tmax=',round(maxrad,3),'\tlim=',round(c(lims[-3]),3),'\n');
+    'rad=',try(sprintf('%6.3f',preds['radest',]))
+    ,'phi=',try(sprintf('%5.2f',phi))
+    ,'max=',sprintf('%6.3f',maxrad)
+    ,'lim=',sprintf('%6.3f',lims[1:2]),lims[-(1:3)],'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
   # DONE: for prioritizing phis, also model the runtime to get most uncertainty
