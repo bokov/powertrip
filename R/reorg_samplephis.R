@@ -529,7 +529,6 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # TODO: pre-calculate lcoords, lvars, and refcoords and pass to ptsim
       iidat <- ptsim(cyclecoords[ii,],refcoords=btrefcoords,...);
       list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
-      #if(any(is.na(list_tfresp[[tfoffset+ii]]))) list_radii[[cycle]][ii] <- NA;
     }
     # then fit models on the panel verdicts (T/F), tfresp
     # na.omits might be unnecessary
@@ -538,12 +537,9 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     #if(length(testrd)!=nrow(testtf)) browser();
     preds <- try(sapply(testtf,resp_preds,radii=testrd));
     if(class(preds)[1]=='try-error') browser();
-    #preds<-sapply(na.omit(data.frame(do.call(rbind,list_tfresp))),resp_preds,radii=na.omit(unlist(list_radii)));
     new.lims <- preds_lims(preds,limit=maxrad,numse = numse,...);
     # strictly temporary for debugging
     if(length(new.lims) != 7) browser();
-    # if the reason for failing is simply that it's too easy to detect a difference
-    # lower the min lim and try again
     # TODO: dynamically calculated a hitrate cutoff midway between the target hitrate
     #       and 1.0 in case somebody someday is seeking a power of, say, .9
     # The below code catches the case where a set of phis if failing because there
@@ -618,8 +614,6 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   pnlph(ppdat,preds['radest',],logenv=logenv,time=as.numeric(Sys.time()-t0,units='secs'));
   if(lims['status']==1){
     cat(':) ');
-    #if(first_success){first_success<-F; browser();}
-    #for(pp in pnfit[preds['conv',]==1]) {
     # it's not enough to test for convergence-- we have to also make sure the 
     # converged results fall within the limits. Not and-ing the below with the
     # convergence criteria because IIRC for us to even get this far, they both
@@ -683,20 +677,14 @@ powertrip<-function(logenv=logenv,refcoords
                     # this runs on each set of phis
                     ,pnlph=ptpnl_phisumm
                     ,ptsim=ptsim_nlin
+                    ,instance=as.character(Sys.time(),'i%y%m%d%I%M%OS1')
                     # technically this can run forever continuously generating
                     # better predictions and get stopped from an external R
                     # session via ptmg()... but it feels wrong to not install
                     # an automatic off-switch, so we will have maxphicycle
                     # if we do need literally indefinite runtime just set 
                     # this to Inf
-                    ,instance=as.character(Sys.time(),'i%y%m%d%I%M%OS1')
                     ,maxphicycle=1e6,...){
-  #phis <- cbind(matrix(runif(npoints*(nphi-1),0,pi),nrow=npoints,ncol=nphi-1),runif(npoints,0,2*pi));
-  # trying more regularly spaced phis, to get a handle on the weird output
-  # 10 intervals per phi results in 10,000 distinct points
-  #phiseq <- sample(seq(0,pi,length.out=npoints),npoints,rep=F);
-  #browser();
-  #phis <- as.matrix(do.call(expand.grid,c(replicate(nphi-1,phiseq,simplify=F),list(sample(seq(0,2*pi,length.out = npoints),npoints,rep=F)))));
   pneval_ <- sapply(pnlst,attr,'eval');
   # maybe this is a good place to initialize logenv for use everywhere else in powertrip
   # so we don't have to keep deriving names in multiple places or passing around too many arguments
@@ -744,13 +732,11 @@ powertrip<-function(logenv=logenv,refcoords
                       ,nphis = nphis,numse = numse));
       phis <- subset(phis,maxrad>0);
       if(!is(phis,'data.frame')||nrow(phis)<1||nrow(subset(phis,maxs<0|mins<0|mins>=maxs|maxs>maxrad))>0) {print('Jacked phis created!');browser();}
-      #logenv$temp$maxrads <- maxrads <- apply(phis,1,pollim,maxs=maxs,mins=mins);
       actualpoints <- nrow(phis);
     }
     for(ii in seq_len(actualpoints)){
       deepassign(logenv,c('subsets',instance)
                  ,philabel <- sprintf('%s_%04d_%02d',instance,phicycle,ii));
-      #if(console_log) cat(phicycle,'.',ii,'\t');
       if(console_log) cat(sprintf('%s ',substring(philabel,6)));
       phi_radius(phi=unlist(phis[ii,phinames]),maxrad=phis[ii,'maxrad'],pnlst=pnlst
                  ,refcoords = refcoords

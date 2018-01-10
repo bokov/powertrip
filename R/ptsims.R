@@ -171,24 +171,24 @@ ptpnl_phisumm <- new.ptpnl('summ'
 #' NOTE: avoid creating variables that match the regexp "^phi[0-9]$" because 
 #' env_fitinit() will mistake them for phinames
 #' 
-ptpnl_summary <- new.ptpnl('summ.old'
-                           ,fit = split(data.frame(data),data.frame(data)[,1])
-                           #,cycles.=quote(cycle)
-                           #,nsims.=quote(length(list_tfresp))
-                           #,phi.=quote(phi)
-                           ,time=quote(Sys.time())
-                           ,literals=c('coords','cycle','phi','preds','lims','maxrad','phicycle')
-                           #,philabel_= quote(callingframe$philabel)
-                           #,preds.=quote(preds)
-                           #,philabel_=quote(philabel)
-                           ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
-                                       ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
-                                       ,nsims=length(callingframe$list_tfresp)
-                                       ,time=time
-                                       ,tstamp=Sys.time())
-                                          # ,preds=preds,phi=phi,time=time,cycles=cycles,nsims=nsims)
-                           #,index=substitute(c('coords',`philabel_`,'summ')));
-);
+# ptpnl_summary <- new.ptpnl('summ.old'
+#                            ,fit = split(data.frame(data),data.frame(data)[,1])
+#                            #,cycles.=quote(cycle)
+#                            #,nsims.=quote(length(list_tfresp))
+#                            #,phi.=quote(phi)
+#                            ,time=quote(Sys.time())
+#                            ,literals=c('coords','cycle','phi','preds','lims','maxrad','phicycle')
+#                            #,philabel_= quote(callingframe$philabel)
+#                            #,preds.=quote(preds)
+#                            #,philabel_=quote(philabel)
+#                            ,result = c(summaries=sapply(fit,function(xx) sapply(xx,summary,simplify=F),simplify=F)
+#                                        ,sapply(intersect(literals,names(callingframe)),function(xx) callingframe[[xx]],simplify=F)
+#                                        ,nsims=length(callingframe$list_tfresp)
+#                                        ,time=time
+#                                        ,tstamp=Sys.time())
+#                                           # ,preds=preds,phi=phi,time=time,cycles=cycles,nsims=nsims)
+#                            #,index=substitute(c('coords',`philabel_`,'summ')));
+# );
 
 # TODO: change all the below functions to automatically tack on a detect=eval(eval.)
 # onto their result argument
@@ -236,57 +236,8 @@ ptpnl_gm <- new.ptpnl('gm'
                       ,frm=Surv(yy)~group,psig=0.05
                       ,matchterm='control');
 
-#' coxph
-#' The following work (after running the ptsim_nlin example near top of script):
-#' 
-#' Group alone:
-#ptpnl_lm(foo,c(1.06,5.124,2,-0.5),matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
-#' With interactions:
-#ptpnl_lm(foo,c(1.06,5.124,2,-0.5),frm=yy~(.)*group, matchterm = c('grouptreated','grouptreated:X1','grouptreated:X2','grouptreated:X3'));
-
-#' there can be a list of these, and they can repeat
-#baz<-c(ptpnl_passthru,ptpnl_qntile,ptpnl_passthru);
-#' you can generate names for them automatically
-#names(baz) <- make.unique(sapply(baz,attr,'fname'));
-#' you can generate a logical vector indicating which of them should return a TRUE/FALSE decision
-#sapply(baz,attr,'eval');
-#' you can see how each of them were created
-#sapply(baz,attr,'call');
-#' Of course you can evaluate them all on the same dataset, the main purpose of them
-#logenv <- new.env();
-#for(ii in names(baz)) baz[[ii]](mtcars,c(-1,1),logenv=logenv,index=ii);
-
 #' getCall method for a ptpnl_fn function.
 getCall.ptpnl_fn <- function(xx,...) attr(xx,'call');
-#' This enables the following to work:
-#ptpnl_quartl <- eval(update(ptpnl_qntile,fname='quartl',fit=quantile(data[,1],c(0,.25,.5,.75,1))));
-#' Panels
-# ptpnl_passthru <- function (data, coords, logenv = NULL, errenv = NULL, index, 
-#           pninfo = F, ...) 
-# {
-#   if (pninfo) {
-#     return(list(fname = "passthru", eval = TRUE))
-#   }
-#   fit <- try(data[1])
-#   if (is(fit, "try-error")) {
-#     if (!is.null(errenv)) 
-#       errenv[[index]] <- fit
-#     return(NA)
-#   }
-#   else {
-#     if (!is.null(logenv)) 
-#       logenv[[index]] <- list(summary = fit[1], coords = coords, 
-#                               call = sys.call(sys.parent()))
-#   }
-#   return(fit[1])
-# }
-# 
-#' 
-# ptpnl_passthru.bak <- function(data,coords=NULL,...){
-#   list(outcome=data
-#        ,coords=coords
-#        ,call=sys.call(sys.parent()));
-# }
 
 ptpnl_2lin <- function(data,coords=NULL,termrxp='group',sig=0.05,...){
   fits <- list(add=try(lm(yy~.,data))
