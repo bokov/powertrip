@@ -167,7 +167,7 @@ env_fitpred <- function(logenv,newdata
   cat('Kriging...\n');
   trfun <- if(logpred) log else identity;
   invfun <- if(logpred) exp else identity;
-  krigs <- try(sapply(radnames,function(xx) fields::mKrig(radsphis[predsample,phinames]
+  krigs <- sapply(radnames,function(xx) try(fields::mKrig(radsphis[predsample,phinames]
                                                       ,trfun(radsphis[[xx]][predsample]),na.rm=T
                                                       # experimental, commented out for running instances
                                                       #,cov.function='stationary.taper.cov'
@@ -175,7 +175,7 @@ env_fitpred <- function(logenv,newdata
                                                       #,cov.args=list(R=1)
                                                       #,lambda=lambda,theta=theta
                                                       ),simplify=F));
-  if(is(krigs,'try-error')) browser();
+  if(any(sapply(krigs,is,'try-error'))) {cat('At least one of the krigs failed'); browser();}
   cat('Predicting...\n');
   preds <- lapply(krigs,predict,newdata[,phinames]);
   cat('Confidence intervals...\n');
