@@ -22,6 +22,6 @@ lrelmins<-((lmins<-log(mins <- c(1.42888814448938e-06, 0.00103798220880217, 1e-1
                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
 		  #,instance='i18010909lessrunifbias' 
 		  #,instance=as.character(Sys.time(),'i%y%m%d%Ilessrunifbias')
-		  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mgapfix')
+		  ,instance=as.character(Sys.time(),'i%y%m%d%I%MIMRminup')
                   ,backtrans=exp,type='gm',tol=0.1);
 #savehistory(file='runscrap.R')
