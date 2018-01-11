@@ -329,7 +329,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
       ## nkeep <- topn*2^-length(quadrants);
       #nkeep <- round(topn/3);
       # we no longer have to sample the same number from each bin
-      nkeep <- round(topn*c(.2,.4,.4));
+      nkeep <- round(topn*c(.1,.4,.5));
       ## removing, in favor of sampling by predicted raii
       # filterkeep <- unsplit(lapply(split(fp[,snames]+pmax(fp[,fnames],0),quadrants),function(xx) {
       #   if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
