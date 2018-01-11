@@ -33,7 +33,7 @@ load.ptenv <- function(file='pt_result.rdata',env=new.env(),logenvonly=T,savewai
 dfcrt <- function(data,radius,phis=c('phi1','phi2')
                   ,refcoords=0,transform=identity,subset=T){
   subset<-substitute(subset);
-  oo<-data.frame(pol2crt(subset(data,subset=eval(subset))[,c(radius,phis)]));
+  oo<-data.frame(pol2crt(subset(data.frame(data),subset=eval(subset))[,c(radius,phis)]));
   if(any(refcoords!=0)){
     if(length(refcoords)==1) refcoords <- rep_len(refcoords,length(phis)+1);
     oo <- oo + rbind(refcoords)[rep_len(1L,nrow(oo)),]

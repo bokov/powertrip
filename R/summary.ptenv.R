@@ -16,7 +16,10 @@ read_ptenv<-function(logenv,...){
   oo$maindata <- pt2df(oo$logenv); #head(oo$maindata);
   oo$points <-do.call(cbind,sapply(oo$polradcols
                                    ,function(xx) dfcrt(oo$maindata,xx),simplify=F));
-  oo$subsets <- data.frame(sapply(setNames(sprintf('%s==1',nfnames),paste0('s.',radnames)),function(xx) eval(parse(text=xx)[[1]],envir=oo$maindata)));
+  oo$subsets <- data.frame(
+    sapply(setNames(sprintf('%s==1',nfnames)
+                    ,paste0('s.',radnames))
+           ,function(xx) eval(parse(text=xx)[[1]],envir=oo$maindata)));
   oo$subsets$notok<-with(oo$maindata,lims.status!=1);
   oo$subsets$ok<-with(oo$maindata,lims.status==1);
   #with(dat4,addmargins(table(lims.notfailed.cx,lims.notfailed.gm)))/nrow(dat4);
@@ -85,7 +88,10 @@ subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle
   carts <- intersect(select,colnames(x$crtcolumns));
   select <- setdiff(select,carts);
   for(ii in carts) select <- c(x$crtcolumns[,ii],select);
-  oo[tfsubset,select,drop=F];
+  # plan to later learn more about data.table and see if the stuff that uses the 
+  # output from subset.summary.ptenv would benefit from its features but sticking
+  # with the clumsy approach for now and coercing back to data.frame() on output
+  data.frame(oo)[tfsubset,select,drop=F];
 }
 
 `[.summary.ptenv`<-subset.summary.ptenv;
