@@ -603,8 +603,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # this is for catching the suspected fixable failure case where there is a
       # gap between the largest radius without a detectable difference and the 
       # smallest radius with one
-      gap <- sapply(testtf[,pnfit],function(xx) c(min(testtf$rad[xx])
-                                                  ,max(testtf$rad[!xx])));
+      gap <- sapply(testtf,function(xx) c(min(testrd[xx]),max(testrd[!xx])));
       # if failure due to too few or too many hits, force wider limits, add more
       # time, and try again
       if(hitrate>0.9 && new.lims['min']>0) {
