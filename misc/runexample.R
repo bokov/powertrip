@@ -17,12 +17,15 @@ lrelmaxs<-((lmaxs<-log(maxs <- c(0.000448943309591518, 0.0195827842383701, 0.058
 #lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00103798220880217, 1e-16)))-lrefcoords);
 # might need to tighten up lower bound on IMR so make_phis() will pay more attention to the
 # extremes of the RoA range for the Weibull model (cx) (starting with IMRminup instance)
-lrelmins<-((lmins<-log(mins <- c(1.42888814448938e-06, 0.00103798220880217, 1e-16)))-lrefcoords);
+#lrelmins<-((lmins<-log(mins <- c(1.42888814448938e-06, 0.00103798220880217, 1e-16)))-lrefcoords);
+# oops, that was wrong, should have been the RoA param
+lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-16)))-lrefcoords);
 .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
 		  #,instance='i18010909lessrunifbias' 
 		  #,instance=as.character(Sys.time(),'i%y%m%d%Ilessrunifbias')
 		  #,instance=as.character(Sys.time(),'i%y%m%d%I%MIMRminup')
-		  ,instance=as.character(Sys.time(),'i%y%m%d%I%MIMRnewnkeeps')
-                  ,backtrans=exp,type='gm',tol=0.1);
+	     	  #, instance=as.character(Sys.time(),'i%y%m%d%I%MIMRRewnkeeps')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%MRoAnewnkeeps')
+		                    ,backtrans=exp,type='gm',tol=0.1);
 #savehistory(file='runscrap.R')
