@@ -600,6 +600,11 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
                                          ,lims[c('min','max')]
                                          ,new.lims[c('min','max')]);
       hitrate <- mean(unlist(testtf),na.rm=T);
+      # this is for catching the suspected fixable failure case where there is a
+      # gap between the largest radius without a detectable difference and the 
+      # smallest radius with one
+      gap <- sapply(testtf[,pnfit,with=F]
+                    ,function(xx) c(min(testtf$rad[xx]),max(testtf$rad[!xx])));
       # if failure due to too few or too many hits, force wider limits, add more
       # time, and try again
       if(hitrate>0.9 && new.lims['min']>0) {
@@ -610,6 +615,14 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
         new.lims['max']<-maxrad; new.lims['status'] <- 0;
         timeout <-2*timeout;
         cat(' restarting with max=maxrad ');
+      } else if(any(whichgap<-gap[1,]>gap[2,])){
+        gaprange<-range(gap[,whichgap]);
+        # kind of ad-hoc, but basically if there is a gap,
+        # make that gap the center of the next sampling interval
+        new.lims['max']<-gmean(c(gaprange[2],new.lims['max']));
+        new.lims['min']<-gaprange[1]/2;
+        new.lims['status'] <- 0;
+        cat(' gap fill attempt ');
       }
     }
     # if there are still out-of-bounds predictions keep status as-is (0 or -1) 
