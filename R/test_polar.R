@@ -159,6 +159,45 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
   #min(oo[oo>0]);
 }
 
+# pollimnew <- function(coords,maxs=Inf,mins=-Inf,compare=c('gt','lt'),choose=c(min,max),...){
+#   if(length(maxs)!=length(coords)+1 && length(maxs)>1) stop('maxs should be 1 more than length of coords');
+#   if(length(mins)!=length(coords)+1 && length(mins)>1) stop('mins should be 1 more than length of coords');
+#   maxs <- rep_len(maxs,length(coords)+1); mins <- rep_len(mins,length(coords)+1);
+#   mxoo <- maxs/(c(cos(coords),1)*cumprod(c(1,sin(coords))));
+#   mnoo <- mins/(c(cos(coords),1)*cumprod(c(1,sin(coords))));
+#   cmp <- switch(match.arg(compare),gt=`>`,lt=`<`);
+#   mxc <- cmp(mxoo,0); mnc <- cmp(mnoo,0);
+#   mxo <- if(any(mxc)) choose[[1]](mxoo[mxc]) else 0;
+#   mno <- if(any(mnc)) choose[[2]](mnoo[mnc]) else 0;
+#   if(mxo>mno) c(max=mxo,min=mno) else c(max=0,min=0);
+# }
+
+#' The above does not work, but here is the specification for a function that will
+#' do the job of selecting a box-shaped region of the parameter space and sampling
+#' only from there:
+#' 
+#' 1. Specify newmaxs and newmins.
+#' 2. turn them into a bounding box (A)
+#' 3. construct an enclosing box (B) that shares all but one of the faces of A 
+#'    and the remaining one extends to one of the walls of the global bounding 
+#'    box and encompasses the origin
+#' 4. In Cartesian space ample bunch of points within A, convert to phis
+#' 5. For those phis get maxrad using the bound further from the origin as the 
+#'    maxs and the shared lower bound as the mins
+#' 6. Repeat but now using the bound closer to the origin as the maxs and again
+#'    the shared lower bound as the mins. This is minrad
+#' 7. Subset just the phis where maxrad > minrad
+#' 8  Pass the phis, maxrad, and minrad to the sampling function
+#' 9  Sampling radii is just like before except now the lower bound is minrad
+#' 10 instead of 0
+#' 
+#' Open question: the above works when newmins are on the same side of the origin
+#' as newmaxs, but what about opposite sides? I guess if the above doesn't
+#' generalize to that, we can detect this case and simply use existing pollim
+#' with 0 always as minrad
+#' 
+#' Does it matter where the entire bounding box is located relative to origin?
+
 #' ### The following is likely no longer needed so commenting out to see if
 #' anything breaks on rebuild of package
 #' 
