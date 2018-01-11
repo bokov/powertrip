@@ -43,7 +43,8 @@ print.summary.ptenv<-summary.summary.ptenv<-function(x,...){
   show(list(column_groups=c(colnames(x$maindata),colnames(x$crtcolumns))
             ,named_subsets=colnames(x$subsets)
             ,last_phicycle=max(x$maindata$phicycle)
-            ,points=nrow(x$maindata)));
+            ,points=nrow(x$maindata)
+            ,rowsets=cbind(sapply(x$logenv$subsets,length))));
   #show(x$by_cycle);
   #head(x);
 }
