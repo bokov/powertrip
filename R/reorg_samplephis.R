@@ -327,17 +327,25 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
       # the number of records for a quadrant, keep all of them, otherwise rank them within the quadrant
       # and output the filter to unsplit
       ## nkeep <- topn*2^-length(quadrants);
-      nkeep <- round(topn/3);
+      #nkeep <- round(topn/3);
+      # we no longer have to sample the same number from each bin
+      nkeep <- round(topn*c(.2,.4,.4));
       ## removing, in favor of sampling by predicted raii
       # filterkeep <- unsplit(lapply(split(fp[,snames]+pmax(fp[,fnames],0),quadrants),function(xx) {
       #   if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
       #     return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method = 'random',na.last=F)>(nrxx-nkeep))}})
       #   ,quadrants);
       ## end of removed section
-      filterkeep <- unsplit(lapply(split(fp[,snames],cuts),function(xx) {
-        if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
-          return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method='random')>(nrxx-nkeep))}
-        }),cuts);
+      filterkeep <- unsplit(mapply(
+        function(xx,nn) if((nrxx<-nrow(xx))<=nn) {
+          return(rep_len(T,nrxx)) } else {
+            return(rank(do.call(pmax,c(xx,na.rm=T))
+                        ,ties.method='random')>(nrxx-nn))}
+        ,split(fp[,snames],cuts),nkeep),cuts);
+      # filterkeep <- unsplit(lapply(split(fp[,snames],cuts),function(xx) {
+      #   if((nrxx<-nrow(xx))<=nkeep) return(rep_len(T,nrxx)) else {
+      #     return(rank(do.call(pmax,c(xx,na.rm=T)),ties.method='random')>(nrxx-nkeep))}
+      #   }),cuts);
       # I guess we sometimes still get some NAs making their way into filterkeep
       # and then causing trouble, so turn all NA values of filterkeep to F
       filterkeep <- filterkeep & !is.na(filterkeep);
