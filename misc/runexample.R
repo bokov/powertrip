@@ -18,6 +18,7 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00103798220880217, 1e-1
 .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
 		  #,instance='i18010909lessrunifbias' 
-		  ,instance=as.character(Sys.time(),'i%y%m%d%Ilessrunifbias')
+		  #,instance=as.character(Sys.time(),'i%y%m%d%Ilessrunifbias')
+		  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mgapfix')
                   ,backtrans=exp,type='gm',tol=0.1);
 #savehistory(file='runscrap.R')
