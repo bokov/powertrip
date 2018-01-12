@@ -159,6 +159,13 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
   #min(oo[oo>0]);
 }
 
+pollims <- function(xx,maxs,mins,innermaxs=maxs,innermins=mins,...){
+  oo1 <- apply(xx,1,pollim,maxs=maxs,mins=mins);
+  oo2 <- if(any(innermaxs!=maxs)||any(innermins!=mins)){
+    apply(xx,1,pollim,maxs=innermaxs,mins=innermins)} else 0;
+  cbind(maxrad=oo1,minrad=oo2);
+}
+
 # pollimnew <- function(coords,maxs=Inf,mins=-Inf,compare=c('gt','lt'),choose=c(min,max),...){
 #   if(length(maxs)!=length(coords)+1 && length(maxs)>1) stop('maxs should be 1 more than length of coords');
 #   if(length(mins)!=length(coords)+1 && length(mins)>1) stop('mins should be 1 more than length of coords');
