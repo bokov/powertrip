@@ -172,6 +172,13 @@ pollims <- function(xx,maxs,mins,innermaxs=maxs,innermins=mins,...){
 
 # innermaxs and innermins can/should be NA except wheir their values differ
 # from maxs and mins respectively
+# 
+# The following maxs and mins values fit within the same bounding box as
+# the human simulation data in the example...
+# testmxs <- c(2.5, 0.4, 3.0); testmns <- c(-4.0,  -0.4, -15.0)
+# the following works so far... foo <- test_boxes(testmxs,testmns,c(NA,0.2,NA));
+# setting any of the innermaxs works, but none of the innermins
+
 test_boxes <- function(maxs,mins,innermaxs=NA,innermins=NA,nn=100,...){
   # individual limits
   omx <- maxs; imx <- pmin(maxs,innermaxs,na.rm = T);
