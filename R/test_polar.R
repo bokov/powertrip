@@ -212,24 +212,28 @@ test_minrad<-function(coords,mins=-Inf,...){
 
 test_boxes <- function(maxs,mins,innermaxs=NA,innermins=NA,nn=100,...){
   # individual limits
-  omx <- maxs; imx <- pmin(maxs,innermaxs,na.rm = T);
-  #imximn <- pmin(maxs,pmax(innermaxs,innermins,na.rm=T),na.rm=T);
-  gmn <- pmax(mins,innermaxs,na.rm=T);
-  omn <- mins; imn <- pmax(mins,innermins,na.rm = T);
-  gmx <- pmax(mins,innermins,na.rm=T);
-  #imnimx <- pmax(mins,pmin(innermins,innermaxs,na.rm=T),na.rm=T);
-  # pairs of limits (upper & lower)
-  lms <- list(mxmn=rbind(upper=omx,lower=omn), imximn=rbind(upper=imx,lower=imn)
-              ,mxgap=rbind(upper=omx,lower=gmn)
-              ,mngap=rbind(upper=gmx,lower=omn));
-    # ,mximx=rbind(upper=omx,lower=imx),mximximn=rbind(upper=omx,lower=imximn)
-    # ,imnmn=rbind(upper=imn,lower=omn),imnimxmn=rbind(upper=imnimx,lower=omn));
-  cpts <- lapply(lms,function(xx) gencartunif(maxs = xx[1,],mins=xx[2,],nn=nn));
-  pbox <- mapply(function(xx,ll){
-    oo <- crt2pol(xx); oo[,1] <- apply(oo[,-1],1,pollim,ll[1,],ll[2,]); oo;
-  },cpts,lms,SIMPLIFY = F);
-  cbox <- lapply(pbox,function(xx) pol2crt(xx)[,c(2,3,1)]);
-  return(list(lms=lms,cpts=cpts,pbox=pbox,cbox=cbox));
+  # omx <- maxs; imx <- pmin(maxs,innermaxs,na.rm = T);
+  # #imximn <- pmin(maxs,pmax(innermaxs,innermins,na.rm=T),na.rm=T);
+  # gmn <- pmax(mins,innermaxs,na.rm=T);
+  # omn <- mins; imn <- pmax(mins,innermins,na.rm = T);
+  # gmx <- pmax(mins,innermins,na.rm=T);
+  # #imnimx <- pmax(mins,pmin(innermins,innermaxs,na.rm=T),na.rm=T);
+  # # pairs of limits (upper & lower)
+  lms <- rbind(maxs,mins);
+  # lms <- list(mxmn=rbind(upper=omx,lower=omn), imximn=rbind(upper=imx,lower=imn)
+  #             ,mxgap=rbind(upper=omx,lower=gmn)
+  #             ,mngap=rbind(upper=gmx,lower=omn));
+  #   # ,mximx=rbind(upper=omx,lower=imx),mximximn=rbind(upper=omx,lower=imximn)
+  #   # ,imnmn=rbind(upper=imn,lower=omn),imnimxmn=rbind(upper=imnimx,lower=omn));
+  cpts <- gencartunif(maxs=maxs,mins=mins,nn=nn);
+  #cpts <- lapply(lms,function(xx) gencartunif(maxs = xx[1,],mins=xx[2,],nn=nn));
+  pbox <- crt2pol(cpts)[,2:3]; pbox <- data.frame(cbind(pbox,pollims(pbox,maxs,mins)));
+  # pbox <- mapply(function(xx,ll){
+  #   oo <- crt2pol(xx); oo[,1] <- apply(oo[,-1],1,pollim,ll[1,],ll[2,]); oo;
+  # },cpts,lms,SIMPLIFY = F);
+  cbmx <- pol2crt(pbox[,c(4,1,2)]); cbmn <- pol2crt(pbox[,c(3,1,2)]);
+  #cbox <- lapply(pbox,function(xx) pol2crt(xx)[,c(2,3,1)]);
+  return(list(lms=lms,cpts=cpts,pbox=pbox,cbmx=cbmx,cbmn=cbmn)); #cbox=cbox));
 }
 
 # pollimnew <- function(coords,maxs=Inf,mins=-Inf,compare=c('gt','lt'),choose=c(min,max),...){
