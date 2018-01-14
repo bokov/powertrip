@@ -174,7 +174,7 @@ pollim.raw <- function(phis,lims,choose=min) choose(ifelse((oo<-(lims/(c(cos(phi
 # pair is identical (i.e. a flat plane rather than a box)
 pollims <- function(coords,maxs=Inf,mins=-Inf,...){
   # TODO: migrate input validation from pollim()
-  if(any(sign(maxs)!=sign(mins))){
+  if(all(sign(maxs)!=sign(mins))){
     mx <- apply(coords,1,pollim.raw,lims=c(maxs,mins));
     mn <- 0;
   } else {
