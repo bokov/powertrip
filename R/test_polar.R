@@ -163,6 +163,27 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
   #min(oo[oo>0]);
 }
 
+# this is the inner function that pollims() will apply to each row of phis
+pollim.raw <- function(phis,lims,choose=min) choose(ifelse((oo<-(lims/(c(cos(phis),1)*cumprod(c(1,sin(phis))))))>0,oo,NA),na.rm=T);
+
+# the general case function for finding radius bound from a Cartesian set of 
+# bounds regardless of whether the origin is inside the box (if statement will be
+# true) or outside. Takes a data.frame or matrix as its first argument, no 
+# input checking but maxs and mins must each have a length on greater than the 
+# number of columns in coords. Not tested so far on what happens if one max/min
+# pair is identical (i.e. a flat plane rather than a box)
+pollims <- function(coords,maxs=Inf,mins=-Inf,...){
+  # TODO: migrate input validation from pollim()
+  if(any(sign(maxs)!=sign(mins))){
+    mx <- apply(coords,1,pollim.raw,lims=c(maxs,mins));
+    mn <- 0;
+  } else {
+    mx <- apply(coords,1,pollim.raw,lims=maxs);
+    mn <- apply(coords,1,pollim.raw,lims=mins,choose=max);
+  }
+  return(data.frame(minrad=mn,maxrad=mx));
+}
+
 test_maxrad<-function(coords,maxs=-Inf,...){
   oo <- maxs/(c(cos(coords),1)*cumprod(c(1,sin(coords))));
   if(any(oo>0)) min(oo[oo>0]) else 0;
@@ -173,12 +194,12 @@ test_minrad<-function(coords,mins=-Inf,...){
   if(any(oo>0)) max(oo[oo>0]) else 0;
 }
   
-pollims <- function(xx,maxs,mins,innermaxs=maxs,innermins=mins,...){
-  oo1 <- apply(xx,1,pollim,maxs=maxs,mins=mins);
-  oo2 <- if(any(innermaxs!=maxs)||any(innermins!=mins)){
-    apply(xx,1,pollim,maxs=innermaxs,mins=innermins)} else 0;
-  cbind(maxrad=oo1,minrad=oo2);
-}
+# pollims <- function(xx,maxs,mins,innermaxs=maxs,innermins=mins,...){
+#   oo1 <- apply(xx,1,pollim,maxs=maxs,mins=mins);
+#   oo2 <- if(any(innermaxs!=maxs)||any(innermins!=mins)){
+#     apply(xx,1,pollim,maxs=innermaxs,mins=innermins)} else 0;
+#   cbind(maxrad=oo1,minrad=oo2);
+# }
 
 # innermaxs and innermins can/should be NA except wheir their values differ
 # from maxs and mins respectively
