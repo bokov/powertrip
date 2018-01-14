@@ -178,8 +178,12 @@ pollims <- function(coords,maxs=Inf,mins=-Inf,...){
     mx <- apply(coords,1,pollim.raw,lims=c(maxs,mins));
     mn <- 0;
   } else {
-    mx <- apply(coords,1,pollim.raw,lims=maxs);
-    mn <- apply(coords,1,pollim.raw,lims=mins,choose=max);
+    # in the polar off-center case maxs and mins should really change to inner
+    # (smaller absolute value) and outer (larger absolute value)
+    # we do this with mxmn where inner will be the top row and outer the bottom
+    mxmn <- apply(cbind(maxs,mins),1,function(xx) xx[order(abs(xx))]);
+    mx <- apply(coords,1,pollim.raw,lims=mxmn[2,]);
+    mn <- apply(coords,1,pollim.raw,lims=mxmn[1,],choose=max);
   }
   return(data.frame(minrad=mn,maxrad=mx));
 }
