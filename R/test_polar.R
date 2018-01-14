@@ -163,6 +163,16 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
   #min(oo[oo>0]);
 }
 
+test_maxrad<-function(coords,maxs=-Inf,...){
+  oo <- maxs/(c(cos(coords),1)*cumprod(c(1,sin(coords))));
+  if(any(oo>0)) min(oo[oo>0]) else 0;
+}
+
+test_minrad<-function(coords,mins=-Inf,...){
+  oo <- mins/(c(cos(coords),1)*cumprod(c(1,sin(coords))));
+  if(any(oo>0)) max(oo[oo>0]) else 0;
+}
+  
 pollims <- function(xx,maxs,mins,innermaxs=maxs,innermins=mins,...){
   oo1 <- apply(xx,1,pollim,maxs=maxs,mins=mins);
   oo2 <- if(any(innermaxs!=maxs)||any(innermins!=mins)){
