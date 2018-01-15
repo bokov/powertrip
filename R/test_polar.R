@@ -164,7 +164,7 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
 }
 
 # this is the inner function that pollims() will apply to each row of phis
-pollim.raw <- function(phis,lims,choose=min) choose(ifelse((oo<-(lims/(c(cos(phis),1)*cumprod(c(1,sin(phis))))))>0,oo,NA),na.rm=T);
+pollim.raw <- function(phis,lims,choose=min,ll=length(phis)+1) choose(ifelse((oo<-(rep(lims,each=ll)/(c(cos(phis),1)*cumprod(c(1,sin(phis))))))>0,oo,NA),na.rm=T);
 
 # the general case function for finding radius bound from a Cartesian set of 
 # bounds regardless of whether the origin is inside the box (if statement will be
@@ -172,19 +172,32 @@ pollim.raw <- function(phis,lims,choose=min) choose(ifelse((oo<-(lims/(c(cos(phi
 # input checking but maxs and mins must each have a length on greater than the 
 # number of columns in coords. Not tested so far on what happens if one max/min
 # pair is identical (i.e. a flat plane rather than a box)
-pollims <- function(coords,maxs=Inf,mins=-Inf,...){
-  # TODO: migrate input validation from pollim()
-  if(all(sign(maxs)!=sign(mins))){
-    mx <- apply(coords,1,pollim.raw,lims=c(maxs,mins));
-    mn <- 0;
+pollims <- function(coords,maxs=Inf,mins=-Inf,ll=ncol(coords)+1,...){
+  signdiff <- sign(maxs)==sign(mins);
+  outin <- rbind(maxs,mins);
+  outr <- c(outin[,!signdiff]);
+  outin <- apply(outin[,signdiff,drop=F],2,function(xx) xx[order(abs(xx))]);
+  if(length(outin)!=0){
+    outr <- c(outr,outin[2,]);
+    innr <- outin[1,];
+    mx <- apply(coords,1,pollim.raw,lims=outr,ll=ll);
+    mn <- apply(coords,1,pollim.raw,lims=innr,choose=max,ll=ll);
   } else {
-    # in the polar off-center case maxs and mins should really change to inner
-    # (smaller absolute value) and outer (larger absolute value)
-    # we do this with mxmn where inner will be the top row and outer the bottom
-    mxmn <- apply(cbind(maxs,mins),1,function(xx) xx[order(abs(xx))]);
-    mx <- apply(coords,1,pollim.raw,lims=mxmn[2,]);
-    mn <- apply(coords,1,pollim.raw,lims=mxmn[1,],choose=max);
+    mx <- apply(coords,1,pollim.raw,lims=outr,ll=ll);
+    mn <- 0;
   }
+  # TODO: migrate input validation from pollim()
+  # if(all(sign(maxs)!=sign(mins))){
+  #   mx <- apply(coords,1,pollim.raw,lims=c(maxs,mins));
+  #   mn <- 0;
+  # } else {
+  #   # in the polar off-center case maxs and mins should really change to inner
+  #   # (smaller absolute value) and outer (larger absolute value)
+  #   # we do this with mxmn where inner will be the top row and outer the bottom
+  #   mxmn <- apply(cbind(maxs,mins),1,function(xx) xx[order(abs(xx))]);
+  #   mx <- apply(coords,1,pollim.raw,lims=mxmn[2,]);
+  #   mn <- apply(coords,1,pollim.raw,lims=mxmn[1,],choose=max);
+  # }
   return(data.frame(minrad=mn,maxrad=mx));
 }
 
