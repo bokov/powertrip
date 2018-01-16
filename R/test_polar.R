@@ -164,10 +164,10 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
 }
 
 # this is the inner function that pollims() will apply to each row of phis
-pollim.raw <- function(phis,lims,choose=min,ll=length(phis)+1) choose(ifelse((oo<-(rep(lims,each=ll)/(c(cos(phis),1)*cumprod(c(1,sin(phis))))))>0,oo,NA),na.rm=T);
+pollim.raw.old <- function(phis,lims,choose=min,ll=length(phis)+1) choose(ifelse((oo<-(rep(lims,each=ll)/(c(cos(phis),1)*cumprod(c(1,sin(phis))))))>0,oo,NA),na.rm=T);
 
 # this returns a vector of length one more than the length of phis, and order matters
-pollim.new.raw <- function(phis,lims,...) lims/(c(cos(phis),1)*cumprod(c(1,sin(phis))));
+pollim.raw <- function(phis,lims,...) lims/(c(cos(phis),1)*cumprod(c(1,sin(phis))));
 
 # the general case function for finding radius bound from a Cartesian set of 
 # bounds regardless of whether the origin is inside the box (if statement will be
@@ -187,8 +187,8 @@ pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,debugoutr,
   innr <- setdiff(outin,outr);
   if(!missing(debugoutr)) outr <- debugoutr;
   if(!missing(debuginnr)) innr <- debuginnr;
-  rawmax <- t(apply(coords,1,pollim.new.raw,maxs));
-  rawmin <- t(apply(coords,1,pollim.new.raw,mins));
+  rawmax <- t(apply(coords,1,pollim.raw,maxs));
+  rawmin <- t(apply(coords,1,pollim.raw,mins));
   rawmaxmin <- data.frame(cbind(rawmax,rawmin));
   rawmaxmin[rawmaxmin<0] <- NA;
   maxrad <- do.call(pmin,c(rawmaxmin[,outr],na.rm=T));
@@ -283,28 +283,14 @@ test_lims <-structure(list(posx1 = structure(c(2, 1, 0.2, -0.2, 2, -2), .Dim = 2
 
 
 test_boxes <- function(maxs,mins,nn=100,...){
-  # individual limits
-  # omx <- maxs; imx <- pmin(maxs,innermaxs,na.rm = T);
-  # #imximn <- pmin(maxs,pmax(innermaxs,innermins,na.rm=T),na.rm=T);
-  # gmn <- pmax(mins,innermaxs,na.rm=T);
-  # omn <- mins; imn <- pmax(mins,innermins,na.rm = T);
-  # gmx <- pmax(mins,innermins,na.rm=T);
-  # #imnimx <- pmax(mins,pmin(innermins,innermaxs,na.rm=T),na.rm=T);
   # # pairs of limits (upper & lower)
   lms <- rbind(maxs,mins);
-  # lms <- list(mxmn=rbind(upper=omx,lower=omn), imximn=rbind(upper=imx,lower=imn)
-  #             ,mxgap=rbind(upper=omx,lower=gmn)
-  #             ,mngap=rbind(upper=gmx,lower=omn));
-  #   # ,mximx=rbind(upper=omx,lower=imx),mximximn=rbind(upper=omx,lower=imximn)
-  #   # ,imnmn=rbind(upper=imn,lower=omn),imnimxmn=rbind(upper=imnimx,lower=omn));
+  # points within those limits in Cartesian space
   cpts <- gencartunif(maxs=maxs,mins=mins,nn=nn);
-  #cpts <- lapply(lms,function(xx) gencartunif(maxs = xx[1,],mins=xx[2,],nn=nn));
+  # points AT those limits in polar space
   pbox <- crt2pol(cpts)[,2:3]; pbox <- data.frame(cbind(pbox,pollims(pbox,maxs,mins)));
-  # pbox <- mapply(function(xx,ll){
-  #   oo <- crt2pol(xx); oo[,1] <- apply(oo[,-1],1,pollim,ll[1,],ll[2,]); oo;
-  # },cpts,lms,SIMPLIFY = F);
+  # points AT those limits in polar space 
   cbmx <- pol2crt(pbox[,c(4,1,2)]); cbmn <- pol2crt(pbox[,c(3,1,2)]);
-  #cbox <- lapply(pbox,function(xx) pol2crt(xx)[,c(2,3,1)]);
   return(list(lms=lms,cpts=cpts,pbox=pbox,cbmx=cbmx,cbmn=cbmn)); #cbox=cbox));
 }
 
