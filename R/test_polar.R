@@ -282,7 +282,7 @@ test_lims <-structure(list(posx1 = structure(c(2, 1, 0.2, -0.2, 2, -2), .Dim = 2
                                  "edg1e1", "edg11e"))
 
 
-test_boxes <- function(maxs,mins,innermaxs=NA,innermins=NA,nn=100,...){
+test_boxes <- function(maxs,mins,nn=100,...){
   # individual limits
   # omx <- maxs; imx <- pmin(maxs,innermaxs,na.rm = T);
   # #imximn <- pmin(maxs,pmax(innermaxs,innermins,na.rm=T),na.rm=T);
