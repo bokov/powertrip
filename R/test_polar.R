@@ -166,26 +166,50 @@ pollim <- function(coords,maxs=Inf,mins=-Inf,...){
 # this is the inner function that pollims() will apply to each row of phis
 pollim.raw <- function(phis,lims,choose=min,ll=length(phis)+1) choose(ifelse((oo<-(rep(lims,each=ll)/(c(cos(phis),1)*cumprod(c(1,sin(phis))))))>0,oo,NA),na.rm=T);
 
+# this returns a vector of length one more than the length of phis, and order matters
+pollim.new.raw <- function(phis,lims,...) lims/(c(cos(phis),1)*cumprod(c(1,sin(phis))));
+
 # the general case function for finding radius bound from a Cartesian set of 
 # bounds regardless of whether the origin is inside the box (if statement will be
 # true) or outside. Takes a data.frame or matrix as its first argument, no 
 # input checking but maxs and mins must each have a length on greater than the 
 # number of columns in coords. Not tested so far on what happens if one max/min
 # pair is identical (i.e. a flat plane rather than a box)
-pollims <- function(coords,maxs=Inf,mins=-Inf,ll=ncol(coords)+1,...){
-  signdiff <- sign(maxs)==sign(mins);
-  outin <- rbind(maxs,mins);
-  outr <- c(outin[,!signdiff]);
-  outin <- apply(outin[,signdiff,drop=F],2,function(xx) xx[order(abs(xx))]);
-  if(length(outin)!=0){
-    outr <- c(outr,outin[2,]);
-    innr <- outin[1,];
-    mx <- apply(coords,1,pollim.raw,lims=outr,ll=ll);
-    mn <- apply(coords,1,pollim.raw,lims=innr,choose=max,ll=ll);
-  } else {
-    mx <- apply(coords,1,pollim.raw,lims=outr,ll=ll);
-    mn <- 0;
-  }
+pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,debugoutr,debuginnr){         #ll=ncol(coords)+1,...){
+  # which limit ranges span quadrants?
+  samesign <- sign(maxs)==sign(mins);
+  # which ones have inverted absolute values (e.g. 2,-3 or -1,-4)
+  absvalue <- abs(maxs)<abs(mins);
+  # create the column index 
+  outin <- matrix(seq_along(c(maxs,mins)),nrow=2,byrow = T);
+  outin[,samesign&absvalue] <- outin[2:1,samesign&absvalue];
+  outr <- c(outin[1,],outin[2,!samesign]);
+  innr <- setdiff(outin,outr);
+  if(!missing(debugoutr)) outr <- debugoutr;
+  if(!missing(debuginnr)) innr <- debuginnr;
+  rawmax <- t(apply(coords,1,pollim.new.raw,maxs));
+  rawmin <- t(apply(coords,1,pollim.new.raw,mins));
+  rawmaxmin <- data.frame(cbind(rawmax,rawmin));
+  rawmaxmin[rawmaxmin<0] <- NA;
+  maxrad <- do.call(pmin,c(rawmaxmin[,outr],na.rm=T));
+  minrad <- if(length(innr)>0) do.call(pmax,c(rawmaxmin[,innr,drop=F],na.rm=T)) else 0;
+  if(invremove) {inv <- maxrad < minrad; maxrad[inv]<-minrad[inv] <- NA;}
+  if(bigremove) {big <- sqrt(sum(maxs^2,mins^2)); maxrad<-pmin(maxrad,big); minrad<-pmin(minrad,big);}
+  out <- data.frame(minrad=minrad,maxrad=maxrad);
+  attr(out,'state')<-environment();
+  #return(list(innr=innr,outr=outr))}
+  #outin <- rbind(maxs,mins);
+  #outr <- c(outin[,!signdiff]);
+  #outin <- apply(outin[,signdiff,drop=F],2,function(xx) xx[order(abs(xx))]);
+  # if(length(outin)!=0){
+  #   outr <- c(outr,outin[2,]);
+  #   innr <- outin[1,];
+  #   mx <- apply(coords,1,pollim.raw,lims=outr,ll=ll);
+  #   mn <- apply(coords,1,pollim.raw,lims=innr,choose=max,ll=ll);
+  # } else {
+  #   mx <- apply(coords,1,pollim.raw,lims=outr,ll=ll);
+  #   mn <- 0;
+  # }
   # TODO: migrate input validation from pollim()
   # if(all(sign(maxs)!=sign(mins))){
   #   mx <- apply(coords,1,pollim.raw,lims=c(maxs,mins));
@@ -198,7 +222,7 @@ pollims <- function(coords,maxs=Inf,mins=-Inf,ll=ncol(coords)+1,...){
   #   mx <- apply(coords,1,pollim.raw,lims=mxmn[2,]);
   #   mn <- apply(coords,1,pollim.raw,lims=mxmn[1,],choose=max);
   # }
-  return(data.frame(minrad=mn,maxrad=mx));
+  return(out);
 }
 
 test_maxrad<-function(coords,maxs=-Inf,...){
@@ -227,6 +251,37 @@ test_minrad<-function(coords,mins=-Inf,...){
 # the following works so far... foo <- test_boxes(testmxs,testmns,c(NA,0.2,NA));
 # setting any of the innermaxs works, but none of the innermins
 
+test_lims <-structure(list(posx1 = structure(c(2, 1, 0.2, -0.2, 2, -2), .Dim = 2:3), 
+                         negx1 = structure(c(-1, -2, 0.2, -0.2, 2, -2), .Dim = 2:3), 
+                         posx2 = structure(c(2, -2, 0.2, 0.1, 2, -2), .Dim = 2:3), 
+                         negx2 = structure(c(2, -2, -0.1, -0.2, 2, -2), .Dim = 2:3), 
+                         posx3 = structure(c(2, -2, 0.2, -0.2, 2, 1), .Dim = 2:3), 
+                         negx3 = structure(c(2, -2, 0.2, -0.2, -1, -2), .Dim = 2:3), 
+                         cor000 = structure(c(2, 1, 0.2, 0.1, 2, 1), .Dim = 2:3), 
+                         cor100 = structure(c(-1, -2, 0.2, 0.1, 2, 1), .Dim = 2:3), 
+                         cor010 = structure(c(2, 1, -0.1, -0.2, 2, 1), .Dim = 2:3), 
+                         cor001 = structure(c(2, 1, 0.2, 0.1, -1, -2), .Dim = 2:3), 
+                         cor110 = structure(c(-1, -2, -0.1, -0.2, 2, 1), .Dim = 2:3), 
+                         cor101 = structure(c(-1, -2, 0.2, 0.1, -1, -2), .Dim = 2:3), 
+                         cor011 = structure(c(2, 1, -0.1, -0.2, -1, -2), .Dim = 2:3), 
+                         cor111 = structure(c(-1, -2, -0.1, -0.2, -1, -2), .Dim = 2:3), 
+                         all = structure(c(2, -2, 0.2, -0.2, 2, -2), .Dim = 2:3), 
+                         edg00e = structure(c(2, 1, 0.2, 0.1, 2, -2), .Dim = 2:3), 
+                         edg0e0 = structure(c(2, 1, 0.2, -0.2, 2, 1), .Dim = 2:3), 
+                         edge00 = structure(c(2, -2, 0.2, 0.1, 2, 1), .Dim = 2:3), 
+                         edg01e = structure(c(2, 1, -0.1, -0.2, 2, -2), .Dim = 2:3), 
+                         edg10e = structure(c(-1, -2, 0.2, 0.1, 2, -2), .Dim = 2:3), 
+                         edg0e1 = structure(c(2, 1, 0.2, -0.2, -1, -2), .Dim = 2:3), 
+                         edg1e0 = structure(c(-1, -2, 0.2, -0.2, 2, 1), .Dim = 2:3), 
+                         edg1e1 = structure(c(-1, -2, 0.2, -0.2, -1, -2), .Dim = 2:3), 
+                         edg11e = structure(c(-1, -2, -0.1, -0.2, 2, -2), .Dim = 2:3))
+                    , .Names = c("posx1", 
+                                 "negx1", "posx2", "negx2", "posx3", "negx3", "cor000", "cor100", 
+                                 "cor010", "cor001", "cor110", "cor101", "cor011", "cor111", "all", 
+                                 "edg00e", "edg0e0", "edge00", "edg01e", "edg10e", "edg0e1", "edg1e0", 
+                                 "edg1e1", "edg11e"))
+
+
 test_boxes <- function(maxs,mins,innermaxs=NA,innermins=NA,nn=100,...){
   # individual limits
   # omx <- maxs; imx <- pmin(maxs,innermaxs,na.rm = T);
@@ -252,6 +307,13 @@ test_boxes <- function(maxs,mins,innermaxs=NA,innermins=NA,nn=100,...){
   #cbox <- lapply(pbox,function(xx) pol2crt(xx)[,c(2,3,1)]);
   return(list(lms=lms,cpts=cpts,pbox=pbox,cbmx=cbmx,cbmn=cbmn)); #cbox=cbox));
 }
+
+#' usage: 
+# b_bxs0<-lapply(test_lims,function(xx) test_boxes(maxs=xx[1,],mins=xx[2,],nn=500));
+#' The face-cases:
+# .junk<-lapply(b_bxs0[1:6],function(xx) with(xx,{plot3d(cbmx[,c(2,3,1)],add=T,col='green');plot3d(cbmn[,c(2,3,1)],add=T,col='blue')}))
+#' The corner-cases:
+# .junk<-lapply(b_bxs0[7:14],function(xx) with(xx,{plot3d(cbmx[,c(2,3,1)],add=T,col='green');plot3d(cbmn[,c(2,3,1)],add=T,col='blue')}))
 
 # pollimnew <- function(coords,maxs=Inf,mins=-Inf,compare=c('gt','lt'),choose=c(min,max),...){
 #   if(length(maxs)!=length(coords)+1 && length(maxs)>1) stop('maxs should be 1 more than length of coords');
