@@ -142,7 +142,7 @@ env_fitpred <- function(logenv,newdata
                         # by how many SEs may a prediction overshoot maxrad or 
                         # undershoot minrad before we reject those phis?
                         # only used if maxrad and/or minrad are specified
-                        ,maxminse=0
+                        ,maxminse=3
                         # smoothing parameter for mKrig()
                         ,lambda=0.5
                         # also passed to mKrig() apparently then passed to covariance function
@@ -222,8 +222,9 @@ env_fitpred <- function(logenv,newdata
     ex <- ex|apply(oo[,fnames,drop=F]+maxminse*oo[,snames,drop=F],2,function(xx) xx<minrad);
   }
   cat('Applying filter...\n');
-  debugfilter<-try({oo[ex,fnames] <- NA; oo[ex,snames] <- NA;});
-  if(is(debugfilter,'try-error')) {cat('Something wrong with "ex" in env_fitpred\n'); browser()};
+  oo[,fnames][ex]<-NA; oo[,snames][ex]<-NA;
+  #debugfilter<-try({oo[ex,fnames] <- NA; oo[ex,snames] <- NA;});
+  #if(is(debugfilter,'try-error')) {cat('Something wrong with "ex" in env_fitpred\n'); browser()};
   # apparently especially with small samples you can get negative nsims!
     #oo$nsims.fit[oo$nsims.fit<0] <- NA;
   cat('Done.\n');
