@@ -429,14 +429,15 @@ resp_preds <- function(tfresp,radii,power=0.8,narate=0.5){
 #' column
 
 # used to have tol at 0.01
-preds_lims <- function(preds,tol=1,limit=1e6,numse=2,...){
+preds_lims <- function(preds,tol=1,ulimit=1e6,llimit=0,numse=2,...){
+  # TODO: confirm that the tol argument supplied to powertrip() is making its way here
   # takes the result of iterating res_preds() over each column of tfresps returned
   # by the panel
   # determines which panels failed on latest round 
   # even one the log scale negative values should still be disallowed, so 
   # uncommenting the next line and dcommenting out the one I had for a while
   if(length(dim(preds))!=2) {cat('Wrong number of dimensions for preds\n'); browser();}
-  notfailed <- preds['conv',]==1 & preds['radest',]>0 & preds['radest',] < limit;
+  notfailed <- preds['conv',]==1 & preds['radest',]>llimit & preds['radest',] < ulimit;
   #notfailed <- preds['conv',]==1 & preds['radest',] < limit;
   # determines which panels not yet finished::
   #     sepred*setol > tol  | min < 0 | max > limits
@@ -451,28 +452,10 @@ preds_lims <- function(preds,tol=1,limit=1e6,numse=2,...){
   status<-try(!any(select <- notfailed & notdone));
   if(is(status,'try-error')) browser();
   if(status) select <- notfailed;
-  out <- c(min=max(min(preds['radest',select] - preds['radse',select]*numse),0)
-           ,max=min(max(preds['radest',select] + preds['radse',select]*numse),limit)
+  out <- c(min=max(min(preds['radest',select] - preds['radse',select]*numse),llimit)
+           ,max=min(max(preds['radest',select] + preds['radse',select]*numse),ulimit)
            ,status=status,notfailed=notfailed,notdone=notdone);
 }
-
-#' Not needed, one liner: runif(nn,lims[1],lims[2]);
-#lims_radii <- function(lims,phis,opts,...){
-  # using limits as provided by preds_lims() and a set of phis, uniformly sample
-  # radii within those limits
-  # returns a vector of radii
-#}
-
-#radii_res <- function(radii,phis,opts,ptsim,pnlst,...){
-  # using radii as provided by lims_radii() and phis, a vector of angles
-  # simulates data at each value of radii and the entire vector of phis using
-  # the ptsim() function and iterates over all the functions in pnlst()
-  # returns a data structure which for each value of radii has the verdict returned
-  # by each function of pnlst() (T/F)
-#}
-
-#testenv <- new.env();
-#load('data/testdata.rda',envir = testenv);
 
 #' A function to take a series of pre-generated coordinates, do simulations, and 
 #' run the panel on each one. This is different from phi_radius, below, because 
@@ -499,14 +482,14 @@ powergrid <- function(coords,refcoords,ptsim,pnlst
   }
 };
 
-phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
+phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
                        ,pneval=sapply(pnlst,attr,which='eval')
                        ,pnfit=names(pneval)[pneval]
                        ,pninfo=names(pneval)[!pneval]
                        ,instance='phi_'
                        ,philabel=paste0(instance,paste0(round(phi,3),collapse='_'))
                        ,logenv=logenv,nrads=20
-                       ,max=maxrad,min=0,numse=1.5
+                       ,max=maxrad,min=minrad,numse=1.5
                        ,ptsim=ptsim_nlin
                        ,wd=paste0(getwd(),'/')
                        # when a file having the name specified by this variable is found, 
@@ -535,7 +518,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     # this is to prevent that
     if(abs(diff(lims[c('min','max')]))<1e-5) {
       cat(' widening lims ')
-      lims['min'] <- lims['min']/2;
+      lims['min']<-median(c(lims['min'],minrad));
       lims['max']<-median(c(lims['max'],maxrad));
     }
     # if the coords have been transformed, backtrans puts them back on the scale
@@ -549,7 +532,8 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
         list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])^0.9
         # turn the static coordinate vector into matrix with one column for each
         # phi and nrads rows
-        ,rbind(phi)[rep_len(1,nrads),])));
+        ,v2mat(phi,nrads))));
+        #,rbind(phi)[rep_len(1,nrads),])));
     for(ii in 1:nrads){
       # TODO: pre-calculate lcoords, lvars, and refcoords and pass to ptsim
       iidat <- ptsim(cyclecoords[ii,],refcoords=btrefcoords,...);
@@ -562,9 +546,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     #if(length(testrd)!=nrow(testtf)) browser();
     preds <- try(sapply(testtf,resp_preds,radii=testrd));
     if(class(preds)[1]=='try-error') browser();
-    new.lims <- preds_lims(preds,limit=maxrad,numse = numse,...);
-    # strictly temporary for debugging
-    if(length(new.lims) != 7) browser();
+    new.lims <- preds_lims(preds,ulimit=maxrad,llimit=minrad,numse = numse,...);
     # TODO: dynamically calculated a hitrate cutoff midway between the target hitrate
     #       and 1.0 in case somebody someday is seeking a power of, say, .9
     # The below code catches the case where a set of phis if failing because there
@@ -588,14 +570,14 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       # gap between the largest radius without a detectable difference and the 
       # smallest radius with one
       gap <- sapply(testtf,function(xx) c(min(testrd[xx]),max(testrd[!xx])));
-      gap[1,] <- pmin(gap[1,],maxrad); gap[2,]<-pmax(gap[2,],0);
+      gap[1,] <- pmin(gap[1,],maxrad); gap[2,]<-pmax(gap[2,],minrad);
       # if failure due to too few or too many hits, force wider limits, add more
       # time, and try again
-      if(hitrate>0.9 && new.lims['min']>0) {
-        new.lims['min']<-0; new.lims['status'] <- 0;
+      if(hitrate>0.9 && new.lims['min']>minrad) {
+        new.lims['min']<-minrad; new.lims['status'] <- 0;
         timeout <-2*timeout;
         # TODO: replace zeros in these restarts with minrad!!
-        cat(' restarting with min=0 ');
+        cat(' restarting with min=minrad ');
       } else if(hitrate<0.1 && new.lims['max']<maxrad) {
         new.lims['max']<-maxrad; new.lims['status'] <- 0;
         timeout <-2*timeout;
@@ -605,11 +587,15 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
         # kind of ad-hoc, but basically if there is a gap,
         # make that gap the center of the next sampling interval
         new.lims['max']<-gmean(c(gaprange[2],new.lims['max']));
-        new.lims['min']<-gaprange[1]/2;
+        if(new.lims['min']>0) {
+          new.lims['min'] <- gmean(c(gaprange[1],new.lims['min'])); } else {
+            new.lims['min']<-gaprange[1]/2;
+          }
         new.lims['status'] <- 0;
         cat(' gap fill attempt ');
       }
     }
+    # TODO: think about making this optional or remove altogether
     # if there are still out-of-bounds predictions keep status as-is (0 or -1) 
     # but make the oob predictions visible to pt2df
     if(any(oob <- pmax(preds['radest',],0,na.rm=T)>maxrad)){
@@ -660,7 +646,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
     for(pp in pnfit[lims[paste0('notfailed.',pnfit)]==1]) {
       ppcoords <- backtrans(pol2crt(c(preds['radest',pp],phi)));
       ppdat <-ptsim(ppcoords,refcoords=btrefcoords,...); 
-      # TODO: not sure we actually needs to explicitly specify index, they seem
+      # TODO: not sure we actually need to explicitly specify index, they seem
       # to be properly handling it anyway
       pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
       # for each pp (verdict-returning panel function) we generate a separate dataset therefore
@@ -672,7 +658,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
   if(isTRUE(logenv$state$powertrip$console_log)) cat(
     'rad=',try(sprintf('%6.3f',preds['radest',]))
     ,'phi=',try(sprintf('%5.2f',phi))
-    ,'max=',sprintf('%6.3f',maxrad)
+    ,'bnd=',sprintf('%6.3f',c(minrad,maxrad))
     ,'lim=',sprintf('%6.3f',lims[1:2]),lims[-(1:3)],'\n');
   # DONE: add back in the dynamic script execution and the external exit directive
   # DONE: add a phi -> radius prediction step (multivariate, whole parameter space)
