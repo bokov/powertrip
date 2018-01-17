@@ -192,7 +192,7 @@ pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,debugoutr,
   rawmaxmin <- data.frame(cbind(rawmax,rawmin));
   rawmaxmin[rawmaxmin<0] <- NA;
   maxrad <- do.call(pmin,c(rawmaxmin[,outr],na.rm=T));
-  minrad <- if(length(innr)>0) do.call(pmax,c(rawmaxmin[,innr,drop=F],na.rm=T)) else 0;
+  minrad <- if(length(innr)>0) do.call(pmax,c(rawmaxmin[,innr,drop=F],na.rm=T)) else rep_len(0,nrow(coords));
   if(invremove) {inv <- maxrad < minrad; maxrad[inv]<-minrad[inv] <- NA;}
   if(bigremove) {big <- sqrt(sum(maxs^2,mins^2)); maxrad<-pmin(maxrad,big); minrad<-pmin(minrad,big);}
   out <- data.frame(minrad=minrad,maxrad=maxrad);
