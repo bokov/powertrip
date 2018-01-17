@@ -215,13 +215,15 @@ env_fitpred <- function(logenv,newdata
   if(!is.null(maxrad)){
     cat('Filtering on maximum radius...\n');
     ex <- apply(oo[,fnames,drop=F]-maxminse*oo[,snames,drop=F],2,function(xx) xx>maxrad);
-    oo[fnames][ex] <- NA; oo[snames][ex] <- NA;
+    #oo[fnames][ex] <- NA; oo[snames][ex] <- NA;
   }
   if(!is.null(minrad)){
     cat('Filtering on minimum radius...\n');
     ex <- ex|apply(oo[,fnames,drop=F]+maxminse*oo[,snames,drop=F],2,function(xx) xx<minrad);
   }
-  oo[ex,fnames] <- NA; oo[ex,snames] <- NA;
+  cat('Applying filter...\n');
+  debugfilter<-try({oo[ex,fnames] <- NA; oo[ex,snames] <- NA;});
+  if(is(debugfilter,'try-error')) {cat('Something wrong with "ex" in env_fitpred\n'); browser()};
   # apparently especially with small samples you can get negative nsims!
     #oo$nsims.fit[oo$nsims.fit<0] <- NA;
   cat('Done.\n');
@@ -308,7 +310,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
     attempt<-0;
     while(is(fp,'try-error')&&attempt<3){
       cat('\nRetrying env_fitpred()\n');
-      fp <- try(env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad,...));
+      fp <- try(env_fitpred(logenv,newdata = oo,maxrad = oo$maxrad, minrad=oo$minrad,...));
       attempt<-attempt+1;
     }
     if(is(fp,'try-error')){cat('fit_pred() failed again, debbugging\n'); browser();}
