@@ -799,7 +799,7 @@ powertrip<-function(logenv=logenv,refcoords
       phis <- rbind(phis,make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
                       ,nphis = nphis,numse = numse));
       phis <- subset(phis,maxs>mins);
-      if(!is(phis,'data.frame')||nrow(phis)<1||nrow(subset(phis,maxs<0|mins<0|mins>=maxs|maxs>maxrad))>0) {print('Jacked phis created!');browser();}
+      if(!is(phis,'data.frame')||nrow(phis)<1||nrow(subset(phis,maxs<0|mins<0|maxs>maxrad))>0) {print('Jacked phis created!');browser();}
       actualpoints <- nrow(phis);
     }
     for(ii in seq_len(actualpoints)){
