@@ -594,6 +594,7 @@ phi_radius <- function(phi,maxrad,pnlst,pnlph,refcoords
       if(hitrate>0.9 && new.lims['min']>0) {
         new.lims['min']<-0; new.lims['status'] <- 0;
         timeout <-2*timeout;
+        # TODO: replace zeros in these restarts with minrad!!
         cat(' restarting with min=0 ');
       } else if(hitrate<0.1 && new.lims['max']<maxrad) {
         new.lims['max']<-maxrad; new.lims['status'] <- 0;
