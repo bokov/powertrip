@@ -20,13 +20,20 @@ lrelmaxs<-((lmaxs<-log(maxs <- c(0.000448943309591518, 0.0195827842383701, 0.058
 #lrelmins<-((lmins<-log(mins <- c(1.42888814448938e-06, 0.00103798220880217, 1e-16)))-lrefcoords);
 # oops, that was wrong, should have been the RoA param
 lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-16)))-lrefcoords);
-leftinterestingmaxs<-c(-2.5,0.5,1);
-leftinterestingmins<-c(-8,0.1,-26);
+#' Exploring 'left' edge of surface
+# leftinterestingmaxs<-c(-2.5,0.5,1);
+# leftinterestingmins<-c(-8,0.1,-26);
 # simulating over one specific zone
-.out <- powertrip(logenv,refcoords=lrefcoords,maxs=leftinterestingmaxs,mins=leftinterestingmins
+#' Exploring 'right' edge of surface
+rzmaxs <- c(5,-0.25,2);
+rzmins <- c(1,-0.75,-15);
+.out <- powertrip(logenv,refcoords=lrefcoords
+                  #,maxs=leftinterestingmaxs,mins=leftinterestingmins
+                  ,maxs=rzmaxs,mins=rzmins
                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
-		  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')
                   ,backtrans=exp,type='gm',tol=0.1);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
