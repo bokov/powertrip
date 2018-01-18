@@ -170,7 +170,7 @@ env_splitoff<-function(ptenv,sets){
   labstokeep <- unlist(ptenv$subsets[setdiff(allsubsets,targets)]);
   labstodelete <- setdiff(labstocopy,labstokeep);
   ptenv$coords[intersect(labscoords,labstodelete)] <- NULL;
-  ptenv$allpoints[intersect(labscoords,labstodelete)] <- NULL;
+  ptenv$allpoints[intersect(labsallpts,labstodelete)] <- NULL;
   ptenv$subsets[targets] <- NULL;
   return(out);
 }
