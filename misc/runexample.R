@@ -25,7 +25,8 @@ leftinterestingmins<-c(-8,0.1,-26);
 # simulating over one specific zone
 .out <- powertrip(logenv,refcoords=lrefcoords,maxs=leftinterestingmaxs,mins=leftinterestingmins
                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
+		  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
                   ,backtrans=exp,type='gm',tol=0.1);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
