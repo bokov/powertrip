@@ -144,3 +144,33 @@ pt3d<-function(ptenv,which,subset,...,polar=F){
   }
   rgl::plot3d(ptenv[subset,select],...);
   };
+
+#' moves specified subsets to a new ptenv
+env_splitoff<-function(ptenv,sets){
+  targets <- intersect(sets,allsubsets<-names(ptenv$subsets));
+  if(length(targets)==0) stop('None of the requested subsets were found.');
+  if(length(targets)<length(sets)) warning('Some of the requested subsets were not found.');
+  # names of objects to simply copy as-is
+  verbatimcopy <- setdiff(names(ptenv),c('subsets','coords','allpoints','fits'));
+  # new ptenv to copy to
+  out <- new.env();
+  # copying
+  for(ii in verbatimcopy) out[[ii]] <- ptenv[[ii]];
+  labscoords <- unique(names(ptenv$coords));
+  labsallpts <- unique(names(ptenv$allpoints));
+  # copy over the requested subsets
+  out$subsets <- lapply(ptenv$subsets[targets]
+                        ,function(xx) intersect(xx,c(labscoords,labsallpts)));
+  # copy over the data these subsets represent
+  labstocopy <- unlist(out$subsets);
+  out$coords <- ptenv$coords[intersect(labstocopy,labscoords)];
+  out$allpoints <- ptenv$allpoints[intersect(labstocopy,labsallpts)];
+  # delete the original copies of the entries that are only referenced by the 
+  # copied-over labs
+  labstokeep <- unlist(ptenv$subsets[setdiff(allsubsets,targets)]);
+  labstodelete <- setdiff(labstocopy,labstokeep);
+  ptenv$coords[intersect(labscoords,labstodelete)] <- NULL;
+  ptenv$allpoints[intersect(labscoords,labstodelete)] <- NULL;
+  ptenv$subsets[targets] <- NULL;
+  return(out);
+}
