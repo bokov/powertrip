@@ -508,7 +508,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
                        ,...){
   logenv$state$phi_radius <- environment();
   debugtriggerfunction <- function(xx) F;
-  hardtimeout <- 8*timeout;
+  hardtimeout <- 16*timeout;
   #on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
   tmpsave<-paste0(savefile,'.tmp');
   cycle <- 1;
@@ -559,7 +559,11 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
     timeout_reached <- F;
     # if too much time has elapsed AND still no convergence, change status to failed
     if(as.numeric(Sys.time()-t0,units='secs')>timeout && !new.lims['status']){
-      cat(' timeout '); timeout_reached <- T; new.lims['status'] <- -1;
+      cat(' timeout '); timeout_reached <- T; 
+      # TODO: if timeout > hardtimeout but there are some tests which 0 for notdone
+      # then set the status to 1 (done) and fail all the notdone==1 tests otherwise
+      # proceed to...
+      new.lims['status'] <- -1;
     }
     # now for failed statuses regardless of whether due to timeout or non-convergence
     # look for fixable cases
@@ -578,12 +582,16 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
       # if failure due to too few or too many hits, force wider limits, add more
       # time, and try again
       if(hitrate>0.9 && new.lims['min']>minrad && timeout < hardtimeout) {
-        new.lims['min']<-minrad; new.lims['status'] <- 0;
+        new.lims['max'] <- median(new.lims[c('min','max')]);
+        new.lims['min']<-minrad; 
+        new.lims['status'] <- 0;
         timeout <-2*timeout;
         # TODO: replace zeros in these restarts with minrad!!
         cat(' restarting with min=minrad ');
       } else if(hitrate<0.1 && new.lims['max']<maxrad && timeout < hardtimeout) {
-        new.lims['max']<-maxrad; new.lims['status'] <- 0;
+        new.lims['min'] <- median(new.lims[c('min','max')]);
+        new.lims['max']<-maxrad; 
+        new.lims['status'] <- 0;
         timeout <-2*timeout;
         cat(' restarting with max=maxrad ');
       } else if(hitrate<1 && hitrate>0 && any(whichgap<-gap[1,]>gap[2,])){
