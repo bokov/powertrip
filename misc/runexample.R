@@ -8,6 +8,7 @@ if(file.exists(logenv_file)){
   logenv<-new.env();
   pnlst_gmcx <- list(cx=ptpnl_sr,gm=ptpnl_gm,sims=ptpnl_simsumm);
 }
+tol=0.1;
 lrefcoords<-log(refcoords<-c(3.02495622562167e-06,0.00766970877053115,1.97042457165941e-05));
 # lrelmaxs<-((lmaxs<-log(maxs <- c(1e-04, 0.0195827842383701, 0.001145822)))-lrefcoords);
 # phicycle 142: expanding maxs to... 
@@ -25,16 +26,20 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 # leftinterestingmins<-c(-8,0.1,-26);
 # simulating over one specific zone
 #' Exploring 'right' edge of surface
-rzmaxs <- c(5,-0.25,2);
-rzmins <- c(1,-0.75,-15);
+#rzmaxs <- c(5,-0.25,2);
+#rzmins <- c(1,-0.75,-15);
+fzmaxs <- c(5,0.9373722,8);
+fzmins <- c(-8,-.75,.1);
 .out <- powertrip(logenv,refcoords=lrefcoords
                   #,maxs=leftinterestingmaxs,mins=leftinterestingmins
-                  ,maxs=rzmaxs,mins=rzmins
+                  #,maxs=rzmaxs,mins=rzmins
+                  ,maxs=fzmaxs,mins=fzmins
                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')
-                  ,backtrans=exp,type='gm',tol=0.1);
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mfzn_aftersplitoff')
+                  ,backtrans=exp,type='gm',tol=tol);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
 #                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
