@@ -118,11 +118,12 @@ range.data.frame <- function(df,...){
 #'
 #' @examples
 getresults<-function(ptenv,paramnames,...){
+  ptname <- as.character(substitute(ptenv));
   pnfit <- ptenv$logenv$names$pnfit;
   oo <- list();
   # ugh, argument-magic comes back to bite me
-  eval(parse(text=sprintf("oo$%1$s<-d0[c('ok','s.rad.%1$s'),c('p.rad.%1$s','c.rad.%1$s','ID')];
-                          rownames(oo$%1$s)<-oo$%1$s$ID;",pnfit)));
+  eval(parse(text=sprintf("oo$%1$s<-%2$s[c('ok','s.rad.%1$s'),c('p.rad.%1$s','c.rad.%1$s','ID')];
+                          rownames(oo$%1$s)<-oo$%1$s$ID;",pnfit,ptname)));
   if(!missing(paramnames)) for(ii in names(oo)) colnames(oo[[ii]])[seq_along(paramnames)]<-paramnames;
   oo;
 }
