@@ -385,7 +385,7 @@ pt2df <- function(ptenv,summname='summ'
   # to the default fields below add in maxrad=maxrad next time logenv is rebuilt
   fields <- c(fields,dots);
   rows <- sapply(ptenv$coords
-                 ,function(xx) with(tail(xx[[summname]])[[1]],do.call('c',fields))
+                 ,function(xx) with(tail(xx[[summname]],1)[[1]],do.call('c',fields))
                  ,simplify=F);
   if(length(unique(sapply(rows,length)))){
     oo <- bind_rows(lapply(rows,function(xx) data.table(rbind(xx))),.id='ID');
@@ -654,7 +654,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
       pnlst[[pp]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp));
       # for each pp (verdict-returning panel function) we generate a separate dataset therefore
       # we need to iterate over all the summary-only non-verdict functions for each of these datasets
-      for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,qq));
+      for(qq in pninfo) pnlst[[qq]](ppdat,preds['radest',pp],logenv=logenv,index=c('coords',philabel,pp,qq));
     };
   } else cat('!! ');    #if(first_fail){first_fail<-F; browser();}}
   logenv$allpoints[[philabel]] <- data.table(rad=testrd,rbind(phi),testtf);

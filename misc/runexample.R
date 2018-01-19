@@ -1,14 +1,14 @@
 options(error=recover);
 library(Survomatic);
 logenv_file <- 'pt_result.rdata';
-if(file.exists(logenv_file)){
-  logenv <- load.ptenv(logenv_file,savewait = 0);
-  pnlst_gmcx<-logenv$state$powertrip$pnlst;
-} else {
-  logenv<-new.env();
-  pnlst_gmcx <- list(cx=ptpnl_sr,gm=ptpnl_gm,sims=ptpnl_simsumm);
-}
-tol=0.1;
+# if(file.exists(logenv_file)){
+#   logenv <- load.ptenv(logenv_file,savewait = 0);
+#   pnlst_gmcx<-logenv$state$powertrip$pnlst;
+# } else {
+#   logenv<-new.env();
+#   pnlst_gmcx <- list(cx=ptpnl_sr,gm=ptpnl_gm,sims=ptpnl_simsumm);
+# }
+tol<-0.1;
 lrefcoords<-log(refcoords<-c(3.02495622562167e-06,0.00766970877053115,1.97042457165941e-05));
 # lrelmaxs<-((lmaxs<-log(maxs <- c(1e-04, 0.0195827842383701, 0.001145822)))-lrefcoords);
 # phicycle 142: expanding maxs to... 
@@ -30,11 +30,21 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 #rzmins <- c(1,-0.75,-15);
 fzmaxs <- c(5,0.9373722,8);
 fzmins <- c(-8,-.75,.1);
+#' ## Fresh start -- no training data
+fsmaxs <- c(4,0.9373722,8);
+fsmins <- c(-8,-.75,-20);
+logenv<-new.env();
+pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
+tol<-0.05;
 .out <- powertrip(logenv,refcoords=lrefcoords
                   #,maxs=leftinterestingmaxs,mins=leftinterestingmins
                   #,maxs=rzmaxs,mins=rzmins
-                  ,maxs=fzmaxs,mins=fzmins
-                  ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
+                  #,maxs=fzmaxs,mins=fzmins
+                  ,maxs=fsmaxs,mins=fsmins
+                  ,npoints=100
+                  #,pnlst=pnlst_gmcx
+                  ,pnlst=pnlst_fresh
+                  ,ptsim=ptsim_surv,nrads=60
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')

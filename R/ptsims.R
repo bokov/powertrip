@@ -219,6 +219,16 @@ ptpnl_sr <- new.ptpnl('sr'
                       # should also be able to handle Surv(yy,cc)~.
                       ,frm=Surv(yy)~.,psig=0.05
                       ,matchterm='grouptreated');
+#' Detect differences between quantiles. A measure of *practical*, as opposed to
+#' statistical, significance. Defaults to 12 months difference in either direction
+#' for the third quantile, but can be set to different values with optional arguments
+#' `which` (which part of summary) or `cutoff`
+ptpnl_diff <- new.ptpnl(fname = "diff"
+                        ,fit = sapply(split(data.frame(data)$yy,data.frame(data)[, 1])
+                                      , summary, simplify = F)
+                        ,result = c(detect = eval(eval.), unlist(fit))
+                        ,eval. = abs(fit[[2]] - fit[[1]])[which] > cutoff
+                        ,which = "3rd Qu.", cutoff = 12);
 #' coxph
 ptpnl_cx <- new.ptpnl('cx'
                       ,fit=coxph(formula=frm,data)
