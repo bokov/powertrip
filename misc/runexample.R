@@ -48,7 +48,8 @@ tol<-0.05;
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mfzn_aftersplitoff')
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfzn_aftersplitoff')
+		  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mfresh')
                   ,backtrans=exp,type='gm',tol=tol);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
