@@ -33,7 +33,7 @@ fzmins <- c(-8,-.75,.1);
 #' ## Fresh start -- no training data
 fsmaxs <- c(4,0.9373722,8);
 fsmins <- c(-8,-.75,-20);
-logenv<-new.env();
+#logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
 tol<-0.05;
 .out <- powertrip(logenv,refcoords=lrefcoords
