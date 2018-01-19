@@ -508,6 +508,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
                        ,...){
   logenv$state$phi_radius <- environment();
   debugtriggerfunction <- function(xx) F;
+  hardtimeout <- 8*timeout;
   #on.exit(.GlobalEnv$phi_radius_env <- phi_radius_env);
   tmpsave<-paste0(savefile,'.tmp');
   cycle <- 1;
@@ -576,12 +577,12 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
       gap[1,] <- pmin(gap[1,],maxrad); gap[2,]<-pmax(gap[2,],minrad);
       # if failure due to too few or too many hits, force wider limits, add more
       # time, and try again
-      if(hitrate>0.9 && new.lims['min']>minrad) {
+      if(hitrate>0.9 && new.lims['min']>minrad && timeout < hardtimeout) {
         new.lims['min']<-minrad; new.lims['status'] <- 0;
         timeout <-2*timeout;
         # TODO: replace zeros in these restarts with minrad!!
         cat(' restarting with min=minrad ');
-      } else if(hitrate<0.1 && new.lims['max']<maxrad) {
+      } else if(hitrate<0.1 && new.lims['max']<maxrad && timeout < hardtimeout) {
         new.lims['max']<-maxrad; new.lims['status'] <- 0;
         timeout <-2*timeout;
         cat(' restarting with max=maxrad ');
