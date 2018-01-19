@@ -595,7 +595,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
             new.lims['min']<-gaprange[1]/2;
           }
         new.lims['status'] <- 0;
-        cat(' gap fill attempt ');
+        cat(' gap fill attempt',new.lims[c('min','max')]);
       }
     }
     # TODO: think about making this optional or remove altogether
