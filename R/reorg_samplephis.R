@@ -533,7 +533,10 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
         # if we sample a root of a runif, less biased toward small distances
         # used to be 0.75, but this may cause 'fading' at the edges of maxrad, so need
         # to increase the exponent to 0.9
-        list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max'])^0.9
+        # OMG, this turns out to be a really bad idea! If the sampling range is small,
+        # then EVERY point falls below it!! Removing root altogether! Possible cause
+        # of very long retry cycles.
+        list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']); #^0.9
         # turn the static coordinate vector into matrix with one column for each
         # phi and nrads rows
         ,v2mat(phi,nrads))));
