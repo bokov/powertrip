@@ -526,6 +526,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
     # TODO: fail it if timeout is reached and the lims too narrow? Let's see if this is
     # necessitated by glm() in fact crashing on those cases
     if(!timeout_reached && abs(diff(lims[c('min','max')]))<2e-6) {
+      if(as.numeric(Sys.time()-t0,units='secs')>timeout) browser();
       cat(' widening lims ');
       lims['min']<-median(c(lims['min'],minrad));
       lims['max']<-median(c(lims['max'],maxrad));
