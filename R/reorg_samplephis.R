@@ -517,11 +517,14 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
   list_tfresp <- list_radii <- list();
   tfoffset <- 0;
   t0 <- Sys.time();
+  timeout_reached<-F;
   while(lims['status']==0){
     # at 1.17e-6 we start sampling radii so close to each other that glm() errors
     # this is to prevent that
-    if(abs(diff(lims[c('min','max')]))<1e-5) {
-      cat(' widening lims ')
+    # ...unless timeout has been reached and this is a retry, in which case we don't
+    # want it undoing the work of the gap-fill case!, so adding timeout_reached check
+    if(!timeout_reached && abs(diff(lims[c('min','max')]))<1e-5) {
+      cat(' widening lims ');
       lims['min']<-median(c(lims['min'],minrad));
       lims['max']<-median(c(lims['max'],maxrad));
     }
@@ -564,7 +567,6 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
     # The below code catches the case where a set of phis if failing because there
     # are not enough failures to detect... these seem to often be fixable by dropping
     # the lower bound to 0 and trying again
-    timeout_reached <- F;
     # if too much time has elapsed AND still no convergence, change status to failed
     if(as.numeric(Sys.time()-t0,units='secs')>timeout && !new.lims['status']){
       cat(' timeout '); timeout_reached <- T; 
