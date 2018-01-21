@@ -518,6 +518,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
   tfoffset <- 0;
   t0 <- Sys.time();
   timeout_reached<-F;
+  retries<-0;
   while(lims['status']==0){
     # at 1.17e-6 we start sampling radii so close to each other that glm() errors
     # this is to prevent that
@@ -525,11 +526,12 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
     # want it undoing the work of the gap-fill case!, so adding timeout_reached check
     # TODO: fail it if timeout is reached and the lims too narrow? Let's see if this is
     # necessitated by glm() in fact crashing on those cases
-    if(!timeout_reached && abs(diff(lims[c('min','max')]))<2e-6) {
-      if(as.numeric(Sys.time()-t0,units='secs')>timeout) browser();
-      cat(' widening lims ');
-      lims['min']<-median(c(lims['min'],minrad));
-      lims['max']<-median(c(lims['max'],maxrad));
+    if(abs(diff(lims[c('min','max')]))<5e-6) {
+      if(retries==0){
+        cat(' widening lims ');
+        lims['min']<-median(c(lims['min'],minrad));
+        lims['max']<-median(c(lims['max'],maxrad));
+      }
     }
     # if the coords have been transformed, backtrans puts them back on the scale
     # that ptsim() expects
@@ -599,17 +601,18 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
         new.lims['min']<-minrad; 
         new.lims['status'] <- 0;
         timeout <-2*timeout;
-        # TODO: replace zeros in these restarts with minrad!!
+        retries <- retries + 1;
         cat(' restarting with min=minrad ');
       } else if(hitrate<0.1 && new.lims['max']<maxrad && timeout < hardtimeout) {
         new.lims['min'] <- median(new.lims[c('min','max')]);
         new.lims['max']<-maxrad; 
         new.lims['status'] <- 0;
         timeout <-2*timeout;
+        retries <- retries + 1;
         cat(' restarting with max=maxrad ');
       # TODO: this case will in the future need a hardtimeout check too, but leaving
       # as-is for now in order to catch other subtle near-endless retry cases
-      } else if(hitrate<1 && hitrate>0 && any(whichgap<-gap[1,]>gap[2,])){
+      } else if(hitrate<1 && hitrate>0 && retries < 100 && any(whichgap<-gap[1,]>gap[2,])){
         gaprange<-range(gap[,whichgap]);
         # kind of ad-hoc, but basically if there is a gap,
         # make that gap the center of the next sampling interval
@@ -619,6 +622,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
             new.lims['min']<-gaprange[1]/2;
           }
         new.lims['status'] <- 0;
+        retries <- retries + 1;
         cat(' gap fill attempt',new.lims[c('min','max')],' ');
       }
     }
