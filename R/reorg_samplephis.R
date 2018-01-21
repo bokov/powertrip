@@ -523,6 +523,8 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
     # this is to prevent that
     # ...unless timeout has been reached and this is a retry, in which case we don't
     # want it undoing the work of the gap-fill case!, so adding timeout_reached check
+    # TODO: fail it if timeout is reached and the lims too narrow? Let's see if this is
+    # necessitated by glm() in fact crashing on those cases
     if(!timeout_reached && abs(diff(lims[c('min','max')]))<1e-5) {
       cat(' widening lims ');
       lims['min']<-median(c(lims['min'],minrad));
