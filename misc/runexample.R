@@ -28,11 +28,14 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 #' Exploring 'right' edge of surface
 #rzmaxs <- c(5,-0.25,2);
 #rzmins <- c(1,-0.75,-15);
-fzmaxs <- c(5,0.9373722,8);
-fzmins <- c(-8,-.75,.1);
+#fzmaxs <- c(5,0.9373722,8);
+#fzmins <- c(-8,-.75,.1);
 #' ## Fresh start -- no training data
-fsmaxs <- c(4,0.9373722,8);
-fsmins <- c(-8,-.75,-20);
+#fsmaxs <- c(4,0.9373722,8);
+#fsmins <- c(-8,-.75,-20);
+#' ## Cold start with off-center boundaries (lower half of front curvy part)
+lfzmaxs <- c(4,-0.005,6);
+lfzmins <- c(-2,-0.75,1);
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
 tol<-0.05;
@@ -49,7 +52,8 @@ tol<-0.05;
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfzn_aftersplitoff')
-		  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mfresh')
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfresh')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
                   ,backtrans=exp,type='gm',tol=tol);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
