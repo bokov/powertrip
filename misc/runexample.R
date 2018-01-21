@@ -43,7 +43,8 @@ tol<-0.05;
                   #,maxs=leftinterestingmaxs,mins=leftinterestingmins
                   #,maxs=rzmaxs,mins=rzmins
                   #,maxs=fzmaxs,mins=fzmins
-                  ,maxs=fsmaxs,mins=fsmins
+                  #,maxs=fsmaxs,mins=fsmins
+                  ,maxs=lfzmaxs,mins=lfzmins
                   ,npoints=100
                   #,pnlst=pnlst_gmcx
                   ,pnlst=pnlst_fresh
