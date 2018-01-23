@@ -42,6 +42,12 @@ ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refc
                     ,yy=ifelse(seq_len(2*nn)<=nn,refcoords[1]+xs %*% refcoords[-1],coords[1]+xs %*%coords[-1])+rnorm(2*nn));
 }
 
+#' *Note*: The next few functions which use simsurv() require coords to have 
+#' parameters in the following order: 
+#' 
+#' 'IMR' (or 'a'), 'RoA' (or 'b'), 'EH' (or 'c'), if applicable 'LL' (or 's')
+#' and if applicable sample size last
+
 #' Needs: rlgst.R, rlogmake.R, and the eha package
 ptsim_surv <- function(coords,nn=100,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015),type='lm',...){
   # 
@@ -50,6 +56,26 @@ ptsim_surv <- function(coords,nn=100,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0
                     ,yy=c(simsurv(nn,type,refcoords)
                           ,simsurv(nn,type,coords))
                     ,cc=1));
+  if(is(out,'try-error')) return(expand.grid(group=c('control','treated'),yy=-1,cc=-1)) else out;
+}
+
+#' This is like ptsim_surv except it uses the last coord as the
+#' sample size (the switch statement in first line of body shows exactly how many
+#' params each model takes). The refcoords should be the same length as coords
+#' and appropriate to the model and the defaults are just a set of values that 
+#' happen to work with Logistic-Makeham and are for demonstration purposes only. 
+#' Not going to slow down something that runs so often by putting in more input 
+#' checking here.
+ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1)
+                     ,type=c('e','g','gm','lm'),...){
+  lc <- switch(match.arg(type),e=1,g=2,gm=3,lm=4);
+  coords <- coords*refcoords; 
+  # coords[lc+1] is shared as the sample size for both groups and apparently the 
+  # proper co
+  out <- try(data.frame(group=rep(c('control','treated'),each=coords[lc+1])
+                        ,yy=c(simsurv(coords[lc+1],type,refcoords[1:lc])
+                              ,simsurv(coords[lc+1],type,coords[1:lc]))
+                        ,cc=1));
   if(is(out,'try-error')) return(expand.grid(group=c('control','treated'),yy=-1,cc=-1)) else out;
 }
 #simsurv (n, type = "g", p = c(2.433083e-05, 0.005, 3e-11, 0.0015)) 
