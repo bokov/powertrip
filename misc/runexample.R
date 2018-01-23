@@ -39,8 +39,10 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=0);
 #nnmaxs <- c(imr=6.609438,roa=1.630519,eh=10,nn=6.39692965521615);
 #nnmins <- c(imr=-14.907755,roa=-2.359438, eh=-26, nn=2.30258509299405);
-nnmaxs <- c(lrelmaxs,6.30991827822652); #c(6.609438,1.630519,10,6.39692965521615);
-nnmins <- c(lrelmins,6.10924758276437); #c(-14.907755,-2.359438,-26,2.30258509299405);
+# Oops... our params were never close to the 500 range, it was actually 100 per group by 
+# default. So now the below range from 80 to 120.
+nnmaxs <- c(lrelmaxs,4.78749174278205); #c(6.609438,1.630519,10,6.39692965521615);
+nnmins <- c(lrelmins,4.38202663467388); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
