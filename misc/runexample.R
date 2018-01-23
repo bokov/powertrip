@@ -41,8 +41,9 @@ nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=0);
 #nnmins <- c(imr=-14.907755,roa=-2.359438, eh=-26, nn=2.30258509299405);
 # Oops... our params were never close to the 500 range, it was actually 100 per group by 
 # default. So now the below range from 80 to 120.
-nnmaxs <- c(lrelmaxs,4.78749174278205); #c(6.609438,1.630519,10,6.39692965521615);
-nnmins <- c(lrelmins,4.38202663467388); #c(-14.907755,-2.359438,-26,2.30258509299405);
+# next pair to try, if necessary-- sample size 110 to 90-- 4.70048036579242,4.49980967033027 
+nnmaxs <- c(lrelmaxs,4.70048036579242); #c(6.609438,1.630519,10,6.39692965521615);
+nnmins <- c(lrelmins,4.49980967033027); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
@@ -55,12 +56,12 @@ tol<-0.05;
                   #,maxs=fsmaxs,mins=fsmins
                   #,maxs=lfzmaxs,mins=lfzmins
                   ,maxs=nnmaxs,mins=nnmins
-                  ,npoints=100
+                  ,npoints=300
                   #,pnlst=pnlst_gmcx
                   ,pnlst=pnlst_fresh
                   #,ptsim=ptsim_surv
                   ,ptsim=nnptsim
-                  ,nrads=60
+                  ,nrads=120
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')
