@@ -39,8 +39,8 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=0);
 #nnmaxs <- c(imr=6.609438,roa=1.630519,eh=10,nn=6.39692965521615);
 #nnmins <- c(imr=-14.907755,roa=-2.359438, eh=-26, nn=2.30258509299405);
-nnmaxs <- c(6.609438,1.630519,10,6.39692965521615);
-nnmins <- c(-14.907755,-2.359438,-26,2.30258509299405);
+nnmaxs <- c(lrelmaxs,6.39692965521615); #c(6.609438,1.630519,10,6.39692965521615);
+nnmins <- c(lrelmins,2.30258509299405); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);

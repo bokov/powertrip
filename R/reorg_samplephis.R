@@ -557,7 +557,9 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
     for(ii in 1:nrads){
       # TODO: pre-calculate lcoords, lvars, and refcoords and pass to ptsim
       iidat <- ptsim(cyclecoords[ii,],refcoords=btrefcoords,...);
-      list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat,iicoords)));
+      # TODO: get rid of the coords argument from the ptpn_* functions or find something useful to
+      # do with it that isn't a bug waiting to happen
+      list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat)));
     }
     # then fit models on the panel verdicts (T/F), tfresp
     # na.omits might be unnecessary
