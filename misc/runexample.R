@@ -36,14 +36,14 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 #' ## Cold start with off-center boundaries (lower half of front curvy part)
 #lfzmaxs <- c(4,-0.005,6);
 #lfzmins <- c(-2,-0.75,1);
-nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=0);
+nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=log(94));
 #nnmaxs <- c(imr=6.609438,roa=1.630519,eh=10,nn=6.39692965521615);
 #nnmins <- c(imr=-14.907755,roa=-2.359438, eh=-26, nn=2.30258509299405);
 # Oops... our params were never close to the 500 range, it was actually 100 per group by 
 # default. So now the below range from 80 to 120.
 # next pair to try, if necessary-- sample size 110 to 90-- 4.70048036579242,4.49980967033027 
-nnmaxs <- c(lrelmaxs,4.70048036579242); #c(6.609438,1.630519,10,6.39692965521615);
-nnmins <- c(lrelmins,4.49980967033027); #c(-14.907755,-2.359438,-26,2.30258509299405);
+nnmaxs <- c(lrelmaxs,log(105/94)); #c(6.609438,1.630519,10,6.39692965521615);
+nnmins <- c(lrelmins,log(95/94)); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
@@ -56,7 +56,7 @@ tol<-0.05;
                   #,maxs=fsmaxs,mins=fsmins
                   #,maxs=lfzmaxs,mins=lfzmins
                   ,maxs=nnmaxs,mins=nnmins
-                  ,npoints=300
+                  ,npoints=600
                   #,pnlst=pnlst_gmcx
                   ,pnlst=pnlst_fresh
                   #,ptsim=ptsim_surv

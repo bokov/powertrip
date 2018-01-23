@@ -238,8 +238,9 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
   if(!coords %in% names(logenv) ||
      # below 30 results we get wierd lm behavior given the number of interaction
      # terms we have. The absolute hard limit is 20!
-     length(logenv[[coords]]) <= 30 ||
-     (ndata <- sum(sapply(logenv[[coords]],function(xx) summ %in% names(xx)))) <= 1
+     sum(sapply(logenv[[coords]],function(xx) summ %in% names(xx) && xx[[summ]][[1]]$lims['status']==1)) <= 30 
+     #length(logenv[[coords]]) <= 30 ||
+     #(ndata <- sum(sapply(logenv[[coords]],function(xx) summ %in% names(xx)))) <= 1
      ) return('needsdata') else {
        if(length(fnames<-names(logenv[[fits]]))==0 || 
           length(setdiff(fnames,c(fitslist,radsphis)))>0 ||
