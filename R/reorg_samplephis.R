@@ -612,7 +612,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
         cat(' restarting with max=maxrad ');
       # TODO: this case will in the future need a hardtimeout check too, but leaving
       # as-is for now in order to catch other subtle near-endless retry cases
-      } else if(hitrate<1 && hitrate>0 && retries < 30 && any(whichgap<-gap[1,]>gap[2,])){
+      } else if(hitrate<1 && hitrate>0 && retries < 15 && any(whichgap<-gap[1,]>gap[2,])){
         gaprange<-range(gap[,whichgap]);
         # kind of ad-hoc, but basically if there is a gap,
         # make that gap the center of the next sampling interval
