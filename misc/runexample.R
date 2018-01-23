@@ -34,8 +34,11 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 #fsmaxs <- c(4,0.9373722,8);
 #fsmins <- c(-8,-.75,-20);
 #' ## Cold start with off-center boundaries (lower half of front curvy part)
-lfzmaxs <- c(4,-0.005,6);
-lfzmins <- c(-2,-0.75,1);
+#lfzmaxs <- c(4,-0.005,6);
+#lfzmins <- c(-2,-0.75,1);
+#' Expanded params now including sample size
+ssmaxs <- c(7,1.5,10,0,6.3);
+ssmins <- c(-10,-4,-26,0,2.7);
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
 tol<-0.05;

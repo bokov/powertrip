@@ -45,7 +45,9 @@ ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refc
 #' Needs: rlgst.R, rlogmake.R, and the eha package
 ptsim_surv <- function(coords,nn=100,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015),type='lm',...){
   # 
-  coords<- coords*refcoords;
+  if((lc<-length(coords))<4) coords <- coords + rep_len(0,4) else if (lc>4) nn <- lc[5];
+  if(length(refcoords)<4) refcoords <- + rep_len(0,4);
+  coords<- coords[1:4]*refcoords[1:4];
   out <- try(data.frame(group=rep(c('control','treated'),each=nn)
                     ,yy=c(simsurv(nn,type,refcoords)
                           ,simsurv(nn,type,coords))
