@@ -34,27 +34,36 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 #fsmaxs <- c(4,0.9373722,8);
 #fsmins <- c(-8,-.75,-20);
 #' ## Cold start with off-center boundaries (lower half of front curvy part)
-lfzmaxs <- c(4,-0.005,6);
-lfzmins <- c(-2,-0.75,1);
+#lfzmaxs <- c(4,-0.005,6);
+#lfzmins <- c(-2,-0.75,1);
+nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=0);
+nnmaxs <- c(imr=6.609438,roa=1.630519,eh=10,nn=6.39692965521615);
+nnmins <- c(imr=-14.907755,roa=-2.359438, eh=-26, nn=2.30258509299405);
+nnptsim <- ptsim_srvn;
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
 tol<-0.05;
-.out <- powertrip(logenv,refcoords=lrefcoords
+.out <- powertrip(logenv #,refcoords=lrefcoords
+                  ,refcoords = nnrefs
                   #,maxs=leftinterestingmaxs,mins=leftinterestingmins
                   #,maxs=rzmaxs,mins=rzmins
                   #,maxs=fzmaxs,mins=fzmins
                   #,maxs=fsmaxs,mins=fsmins
-                  ,maxs=lfzmaxs,mins=lfzmins
+                  #,maxs=lfzmaxs,mins=lfzmins
+                  ,maxs=nnmaxs,mins=nnmins
                   ,npoints=100
                   #,pnlst=pnlst_gmcx
                   ,pnlst=pnlst_fresh
-                  ,ptsim=ptsim_surv,nrads=60
+                  #,ptsim=ptsim_surv
+                  ,ptsim=nnptsim
+                  ,nrads=60
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mleftzone')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mlzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mrzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfzn_aftersplitoff')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfresh')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%Mnn')
                   ,backtrans=exp,type='gm',tol=tol);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
