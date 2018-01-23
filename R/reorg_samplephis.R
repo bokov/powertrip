@@ -717,7 +717,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
 powertrip<-function(logenv=logenv,refcoords
                     #,maxs=c(2,4.5,6),mins=c(-3.1,-1.3,-6)
                     ,maxs=c(20,20,20),mins=c(-20,-20,-20)
-                    ,npoints=50,nphis=2,nrads=20,numse=2
+                    ,npoints=50,nphis=length(maxs),nrads=20,numse=2
                     # which fraction of the most impactful phis should we
                     # model each time?
                     ,wd=paste0(getwd(),'/'),savetrigger=paste0(wd,'pt_savedata')
