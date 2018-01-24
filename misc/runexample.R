@@ -42,8 +42,8 @@ nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=log(94));
 # Oops... our params were never close to the 500 range, it was actually 100 per group by 
 # default. So now the below range from 80 to 120.
 # next pair to try, if necessary-- sample size 110 to 90-- 4.70048036579242,4.49980967033027 
-nnmaxs <- c(lrelmaxs,log(105/94)); #c(6.609438,1.630519,10,6.39692965521615);
-nnmins <- c(lrelmins,log(95/94)); #c(-14.907755,-2.359438,-26,2.30258509299405);
+nnmaxs <- c(lrelmaxs,log(100/94)); #c(6.609438,1.630519,10,6.39692965521615);
+nnmins <- c(lrelmins,1e-14); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
