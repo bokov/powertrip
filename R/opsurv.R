@@ -116,7 +116,7 @@ and use the defaults.");}
           ## Damn starting params! You have bested me, I surrender.
           if(verbose>0) cat('!');
           counter<-counter+1; if(counter>1e6){
-            if(interactive()) browser() else stop('param fail after 1e6 tries');
+            if(debug&&interactive()) browser() else stop('param fail after 1e6 tries');
           }
         }
         if(!is.na(lk)){out<-list(p);change<-1;} else {break;}
