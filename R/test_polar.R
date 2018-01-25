@@ -175,7 +175,7 @@ pollim.raw <- function(phis,lims,...) lims/(c(cos(phis),1)*cumprod(c(1,sin(phis)
 # input checking but maxs and mins must each have a length on greater than the 
 # number of columns in coords. Not tested so far on what happens if one max/min
 # pair is identical (i.e. a flat plane rather than a box)
-pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,debugoutr,debuginnr){         #ll=ncol(coords)+1,...){
+pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,tinythresh=1e-10,debugoutr,debuginnr){         #ll=ncol(coords)+1,...){
   # which limit ranges span quadrants?
   samesign <- sign(maxs)==sign(mins);
   # which ones have inverted absolute values (e.g. 2,-3 or -1,-4)
@@ -190,6 +190,10 @@ pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,debugoutr,
   rawmax <- t(apply(coords,1,pollim.raw,maxs));
   rawmin <- t(apply(coords,1,pollim.raw,mins));
   rawmaxmin <- data.frame(cbind(rawmax,rawmin));
+  # turns out that when you get close to zero for some reason you get tons of tiny negative values
+  # which all get set to NA in the next line if not caught first, which eventually produces empty
+  # or nearly empty results. Surprised this didn't pop up earlier.
+  rawmaxmin[abs(rawmaxmin)<tinythresh]<-0;
   rawmaxmin[rawmaxmin<0] <- NA;
   maxrad <- do.call(pmin,c(rawmaxmin[,outr],na.rm=T));
   minrad <- if(length(innr)>0) do.call(pmax,c(rawmaxmin[,innr,drop=F],na.rm=T)) else rep_len(0,nrow(coords));
