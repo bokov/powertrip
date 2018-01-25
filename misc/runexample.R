@@ -69,7 +69,7 @@ tol<-0.05;
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfresh')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mnn')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.nn')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.clean.nn')
                   ,backtrans=exp,type='gm',tol=tol);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
