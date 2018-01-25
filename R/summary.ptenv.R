@@ -15,7 +15,7 @@ read_ptenv<-function(logenv,...){
   oo$crtcolumns <-cbind(crtcols,polcols);
   oo$maindata <- pt2df(oo$logenv); #head(oo$maindata);
   oo$points <-do.call(cbind,sapply(oo$polradcols
-                                   ,function(xx) dfcrt(oo$maindata,xx),simplify=F));
+                                   ,function(xx) dfcrt(oo$maindata,xx,logenv$names$phinames),simplify=F));
   oo$subsets <- data.frame(
     sapply(setNames(sprintf('%s==1',nfnames)
                     ,paste0('s.',radnames))
