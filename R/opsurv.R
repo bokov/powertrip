@@ -84,7 +84,7 @@ and use the defaults.");}
 			#options(show.error.messages=T);
       if(class(out)[1]!="try-error"){
         totaliter<-out[[3]][1]+totaliter;
-        if(totaliter>giveup){
+        if(debug&&totaliter>giveup){
           save(list=ls(all.names=T),file=paste(as.numeric(Sys.time()),'opsurv.rdata',sep='.'));
           print('GIVING UP');
           return(out);

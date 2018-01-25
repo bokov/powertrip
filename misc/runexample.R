@@ -36,13 +36,13 @@ lrelmins<-((lmins<-log(mins <- c(1.01475976473711e-09, 0.00362291389246332, 1e-1
 #' ## Cold start with off-center boundaries (lower half of front curvy part)
 #lfzmaxs <- c(4,-0.005,6);
 #lfzmins <- c(-2,-0.75,1);
-nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=log(20));
+nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=log(30));
 #nnmaxs <- c(imr=6.609438,roa=1.630519,eh=10,nn=6.39692965521615);
 #nnmins <- c(imr=-14.907755,roa=-2.359438, eh=-26, nn=2.30258509299405);
 # Oops... our params were never close to the 500 range, it was actually 100 per group by 
 # default. So now the below range from 80 to 120.
 # next pair to try, if necessary-- sample size 110 to 90-- 4.70048036579242,4.49980967033027 
-nnmaxs <- c(lrelmaxs,log(120/20)); #c(6.609438,1.630519,10,6.39692965521615);
+nnmaxs <- c(lrelmaxs,log(120/30)); #c(6.609438,1.630519,10,6.39692965521615);
 nnmins <- c(lrelmins,1e-14); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
@@ -69,7 +69,7 @@ tol<-0.05;
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfresh')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mnn')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.20.120.nn')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.120.nn')
                   ,backtrans=exp,type='gm',tol=tol);
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
