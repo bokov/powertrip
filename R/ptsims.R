@@ -42,6 +42,32 @@ ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refc
                     ,yy=ifelse(seq_len(2*nn)<=nn,refcoords[1]+xs %*% refcoords[-1],coords[1]+xs %*%coords[-1])+rnorm(2*nn));
 }
 
+#' ### Sketch for future ptsim_lm function, or more generally, location-scale so LS...
+#' 
+#' The first third of the coordinates are the effect sizes of treatment group membership, 
+#' the second third are offsets to the *predictors* (i.e. biased samples, set to 0 if not
+#' simulating bias), and the final third are offsets to standard deviation (i.e. 
+#' heteroscedasticity, set to 0 if not desired). If one coordinate is left over it's used
+#' for sample size, otherwise nn argument is used. If two are left over, it's an error.
+#' The dists should be a list of rnorm()-like functions that take sample size as first
+#' parameter, location as second, and scale as third
+ptsim_ls <- function(coords,nn=100,nc=length(coords)%/%3,refcoords=rep_len(1,nc*3)
+                           ,refdists=list(rnorm)[rep_len(1,nc)],dists=refdists){
+  cseq <- seq_len(ntot<-3*nc);
+  if((diffnc <- length(coords) - ntot)==2) {
+    stop('The length of the coords argument should be either divisible by 3 or one extra if simulating sample sizes');
+  } else if(diffnc==1) {nn <- coords[ntot+1]; coords <- coords[cseq];}
+  # we will split the coordis using the csplt vector with rc the refcoords and tc as the coords
+  csplt <- (cseq-1)%/%3; rc <- split(refcoords,csplt); tc <- split(refcoords + coords,csplt);
+  ooref <- cbind(mapply(function(fn,lc,sc){fn(nn,lc,sc)},refdists,rc[[2]],rc[[3]],...),group='control');
+  ootrt <- cbind(mapply(function(fn,lc,sc){fn(nn,lc,sc)},dists,tc[[2]],tc[[3]],...),group='treated');
+  ooref$yy <- ooref[,seq_len(nc)]%*%rc[[1]];
+  ootrt$yy <- ootrt[,seq_len(nc)]%*%tc[[1]];
+  # oops... but then we need to also have a random error term rather than the errors-in-variables implied
+  # by above... also, coords not necessarily monotonically increasing... oh well, like I said, just a sketch
+  # so I don't forget, not an actual tested, working prototype.
+}
+
 #' *Note*: The next few functions which use simsurv() require coords to have 
 #' parameters in the following order: 
 #' 
