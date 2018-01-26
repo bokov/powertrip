@@ -72,6 +72,7 @@ tol<-0.05;
                   ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.clean.nn')
                   ,backtrans=exp,type='gm',tol=tol);
 
+#
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
 #                   ,npoints=100,pnlst=pnlst_gmcx,ptsim=ptsim_surv,nrads=60
 		  #,instance='i18010909lessrunifbias' 
