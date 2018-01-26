@@ -96,7 +96,8 @@ ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1)
                      ,type=c('e','g','gm','lm'),...){
   lc <- switch(match.arg(type),e=1,g=2,gm=3,lm=4); 
   out <- NULL;
-  coords <- coords*refcoords; if(round(coords[lc+1])>=round(refcoords[lc+1])){
+  coords <- coords*refcoords; 
+  if(round(coords[lc+1])>=round(refcoords[lc+1])){
     # coords[lc+1] is shared as the sample size for both groups and apparently the 
     # proper co... what was I going to write here? Don't know. Darn.
     # TODO: replace cc with 
@@ -105,8 +106,9 @@ ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1)
                           ,yy=c(simsurv(coords[lc+1],type,refcoords[1:lc])
                                 ,simsurv(coords[lc+1],type,coords[1:lc]))
                           ,cc=1));
-  }; 
+  } else cat(' sim-err: N below minimum '); 
   if(is.data.frame(out)) return(out) else {
+    if(is(out,'try-error')) cat(out[1]);
     return(expand.grid(group=c('control','treated'),yy=-1,cc=-1));
   }
 }
