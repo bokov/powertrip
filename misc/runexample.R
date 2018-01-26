@@ -43,7 +43,11 @@ nnrefs <- c(setNames(lrefcoords,c('imr','roa','eh')),nn=log(30));
 # default. So now the below range from 80 to 120.
 # next pair to try, if necessary-- sample size 110 to 90-- 4.70048036579242,4.49980967033027 
 nnmaxs <- c(lrelmaxs,log(160/30)); #c(6.609438,1.630519,10,6.39692965521615);
-nnmins <- c(lrelmins,1e-14); #c(-14.907755,-2.359438,-26,2.30258509299405);
+#nnmins <- c(lrelmins,1e-14); #c(-14.907755,-2.359438,-26,2.30258509299405);
+# apparently if the limit is a small positive amount we start erroring due to minrad 
+# being NA; if we catch that and set it to 0, the limit is no longer strictly observed
+# what if we set it to a negative number?
+nnmins <- c(lrelmins,log(29.5/30)); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
@@ -69,7 +73,8 @@ tol<-0.05;
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mfresh')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mnn')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.clean.nn')
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.clean.nn')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.neglim')
                   ,backtrans=exp,type='gm',tol=tol);
 
 
