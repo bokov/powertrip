@@ -560,7 +560,16 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
       iidat <- ptsim(cyclecoords[ii,],refcoords=btrefcoords,...);
       # TODO: get rid of the coords argument from the ptpn_* functions or find something useful to
       # do with it that isn't a bug waiting to happen
-      list_tfresp[[tfoffset+ii]] <- sapply(pnlst[pneval],function(xx) any(xx(iidat)));
+      list_tfresp[[tfoffset+ii]] <- if(nrow(iidat)>2) {
+        # note that c(NA,NA,NA,F,NA) returns NA while c(NA,NA,NA,T,NA) returs TRUE
+        # does that even make a practical difference? Do any of our models return partial
+        # NA results instead of just dying?
+        sapply(pnlst[pneval],function(xx) any(xx(iidat)));} else {
+          # How much time do we waste cycling over functions with a bad dataset? Hopefull
+          # this will tell us something about that on the console now
+          cat(' error simulating data ');
+          setNames(rep_len(NA,sum(pneval)),names(pnlst)[pneval]);
+        }
     }
     # then fit models on the panel verdicts (T/F), tfresp
     # na.omits might be unnecessary

@@ -97,7 +97,9 @@ ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1)
   lc <- switch(match.arg(type),e=1,g=2,gm=3,lm=4);
   coords <- coords*refcoords; 
   # coords[lc+1] is shared as the sample size for both groups and apparently the 
-  # proper co
+  # proper co... what was I going to write here? Don't know. Darn.
+  # TODO: replace cc with 
+  # cc = sample(1:0,coords[lc+1],rep=T,prob=c(coords[lc+2],1-coords[lc+2]))
   out <- try(data.frame(group=rep(c('control','treated'),each=coords[lc+1])
                         ,yy=c(simsurv(coords[lc+1],type,refcoords[1:lc])
                               ,simsurv(coords[lc+1],type,coords[1:lc]))
