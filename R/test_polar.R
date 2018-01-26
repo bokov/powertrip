@@ -37,7 +37,7 @@ rescale <- function(xx,maxs=0,mins=0,ctr=(maxs+mins)/2,smaxs=1,smins=-1,sctr=0){
 crt2pol<-function(xx,...) {
   nx<-ncol(xx); oo1<-t(apply(xx,1,function(zz) 
     acos(zz/sqrt(rev(cumsum(rev(zz^2)))))))[,-nx]; 
-  oo2<-ifelse(xx[,3]<0,oo1[,nx-1]*-1+2*pi,oo1[,nx-1]);
+  oo2<-ifelse(xx[,nx]<0,oo1[,nx-1]*-1+2*pi,oo1[,nx-1]);
   cbind(rad=sqrt(rowSums(xx^2)),phi=cbind(oo1[,-nx+1],oo2))}
 
 

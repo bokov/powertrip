@@ -549,7 +549,8 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
         # 
         # lims['min']+diff(lims[c('min','max')])*rbeta(nrads,1.5,1)
         # 
-        # not sure it's even needed though
+        # not sure it's even needed though 
+        # NOTE: this is an argument in a function, stop adding semicolon
         list_radii[[cycle]] <- runif(nrads,lims['min'],lims['max']) #^0.9
         # turn the static coordinate vector into matrix with one column for each
         # phi and nrads rows
@@ -568,8 +569,7 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
           # How much time do we waste cycling over functions with a bad dataset? Hopefull
           # this will tell us something about that on the console now
           cat(' error simulating data ');
-          setNames(rep_len(NA,sum(pneval)),names(pnlst)[pneval]);
-        }
+          setNames(rep_len(NA,sum(pneval)),names(pnlst)[pneval]);}
     }
     # then fit models on the panel verdicts (T/F), tfresp
     # na.omits might be unnecessary
