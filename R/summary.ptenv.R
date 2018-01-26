@@ -69,7 +69,7 @@ length.summary.ptenv <- function(x,...) nrow(x$maindata);
 # ... : put subset names here if desired when the subset argument is already used
 # for a logical expression
 # Also copying this into the [ method
-subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle=length(x)){
+subset.summary.ptenv<-function(x,subset=T,select=T,...,minphicycle=1,maxphicycle=Inf){
   dots <- list(...);
   subset<-substitute(subset);
   oo <- cbind(x$maindata,x$points);
@@ -117,13 +117,14 @@ range.data.frame <- function(df,...){
 #' @export
 #'
 #' @examples
-getresults<-function(ptenv,paramnames,...){
+getresults<-function(ptenv,paramnames,minphicycle=1,maxphicycle=Inf){
+  minphicycle<-as.character(minphicycle); maxphicycle<-as.character(maxphicycle);
   ptname <- as.character(substitute(ptenv));
   pnfit <- ptenv$logenv$names$pnfit;
   oo <- list();
   # ugh, argument-magic comes back to bite me
-  eval(parse(text=sprintf("oo$%1$s<-%2$s[c('ok','s.rad.%1$s'),c('p.rad.%1$s','c.rad.%1$s','ID')];
-                          rownames(oo$%1$s)<-oo$%1$s$ID;",pnfit,ptname)));
+  eval(parse(text=sprintf("oo$%1$s<-%2$s[c('ok','s.rad.%1$s'),c('p.rad.%1$s','c.rad.%1$s','ID'),minphicycle=%3$s,maxphicycle=%4$s];
+                          rownames(oo$%1$s)<-oo$%1$s$ID;",pnfit,ptname,minphicycle,maxphicycle)));
   if(!missing(paramnames)) for(ii in names(oo)) colnames(oo[[ii]])[seq_along(paramnames)]<-paramnames;
   oo;
 }
