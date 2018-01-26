@@ -530,8 +530,8 @@ phi_radius <- function(phi,maxrad,minrad=0,pnlst,pnlph,refcoords
     if(abs(diff(lims[c('min','max')]))<5e-6) {
       if(retries==0){
         cat(' widening lims ');
-        lims['min']<-median(c(lims['min'],minrad));
-        lims['max']<-median(c(lims['max'],maxrad));
+        lims['min']<-max(lims['min']-2.5e-6,minrad);
+        lims['max']<-min(lims['max']+2.5e-6,maxrad);
       }
     }
     # if the coords have been transformed, backtrans puts them back on the scale
