@@ -37,8 +37,7 @@ ptsim_nlin <- function(coords,nn=100,lcoords=length(coords),lvars=lcoords-1,refc
   # they are used in the following expression...
   coords <- coords + refcoords;
   xs <- matrix(rnorm(nn*lvars*2),nrow=nn*2,ncol=lvars);
-  out <- data.frame(group=rep(c('control','treated'),each=nn)
-                    ,xs
+  data.frame(group=rep(c('control','treated'),each=nn),xs
                     ,yy=ifelse(seq_len(2*nn)<=nn,refcoords[1]+xs %*% refcoords[-1],coords[1]+xs %*%coords[-1])+rnorm(2*nn));
 }
 

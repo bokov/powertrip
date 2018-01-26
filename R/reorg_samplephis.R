@@ -187,7 +187,7 @@ env_fitpred <- function(logenv,newdata
     # here is a version that tilts the sampling away from close-to-origin values:
     # NOTE: will no longer work as written here, due to forcing uniqueness
     # predsample <- sample(predsample,2000,rep=F,prob=ifelse(pmaxs>quantile(pmaxs,.75,na.rm=T),7,1));
-    predsample<-sample(predsample,2000,rep=F);
+    predsample<-sample(predsample,2000,replace=F);
   }
   cat('Kriging...\n');
   trfun <- if(logpred) log else identity;
@@ -834,8 +834,8 @@ powertrip<-function(logenv=logenv,refcoords
     logenv$state$phicycle<-phicycle<-phicycle+1;
   }
   data.frame(t(sapply(logenv$coords,function(xx) with(xx$summ[[1]],c(
-    phi=phi,radii=ifelse(preds['conv',]==1,preds['radest',],NA)
-    ,time=time,nsims=nsims,cycle=cycle)))));
+    phi=phi,radii=ifelse(preds['conv',]==1, preds['radest',],NA)
+    , time=time, nsims=nsims, cycle=cycle)))));
   #browser();
-};
+}
 # Timing stopped at: 6573 5411 6740 ... about 1.87 hours to try 1000 pairs of phis

@@ -18,4 +18,4 @@ print.survomatic <- function(xx,...){
   print(out);
 }
 
-summary.survomatic <- print.survomatic;
+summary.survomatic <- print.survomatic
