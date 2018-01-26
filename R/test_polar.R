@@ -175,7 +175,9 @@ pollim.raw <- function(phis,lims,...) lims/(c(cos(phis),1)*cumprod(c(1,sin(phis)
 # input checking but maxs and mins must each have a length on greater than the 
 # number of columns in coords. Not tested so far on what happens if one max/min
 # pair is identical (i.e. a flat plane rather than a box)
-pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,tinythresh=1e-10,debugoutr,debuginnr){         #ll=ncol(coords)+1,...){
+pollims <- function(coords,maxs=Inf,mins=-Inf,invthresh=5e-6
+                    # ,bigremove=T removed, see comment below
+                    ,tinythresh=1e-10, debugoutr,debuginnr,...){         #ll=ncol(coords)+1,...){
   # which limit ranges span quadrants?
   samesign <- sign(maxs)==sign(mins);
   # which ones have inverted absolute values (e.g. 2,-3 or -1,-4)
@@ -197,8 +199,11 @@ pollims <- function(coords,maxs=Inf,mins=-Inf,invremove=T,bigremove=T,tinythresh
   rawmaxmin[rawmaxmin<0] <- NA;
   maxrad <- do.call(pmin,c(rawmaxmin[,outr],na.rm=T));
   minrad <- if(length(innr)>0) do.call(pmax,c(rawmaxmin[,innr,drop=F],na.rm=T)) else rep_len(0,nrow(coords));
-  if(invremove) {inv <- maxrad < minrad; maxrad[inv]<-minrad[inv] <- NA;}
-  if(bigremove) {big <- sqrt(sum(maxs^2,mins^2)); maxrad<-pmin(maxrad,big); minrad<-pmin(minrad,big);}
+  if(invthresh>=0) {inv <- maxrad <= minrad+invthresh; maxrad[inv] <- minrad[inv] <- NA;}
+  # Not correctly implemented below: should be max(c(sqrt(sum(maxs^2)),sqrt(sum(mins^2)))), but also shouldn't
+  # ever get triggered anyway if pollim.raw() is working corrrectly. So instead of fixing and testing, commenting 
+  # out for eventual removal.
+  #if(bigremove) {big <- sqrt(sum(maxs^2,mins^2)); maxrad<-pmin(maxrad,big); minrad<-pmin(minrad,big);}
   out <- data.frame(minrad=minrad,maxrad=maxrad);
   attr(out,'state')<-environment();
   #return(list(innr=innr,outr=outr))}
