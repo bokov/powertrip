@@ -50,7 +50,8 @@ nnmaxs <- c(lrelmaxs,log(160/30)); #c(6.609438,1.630519,10,6.39692965521615);
 nnmins <- c(lrelmins,log(29.5/30)); #c(-14.907755,-2.359438,-26,2.30258509299405);
 nnptsim <- ptsim_srvn;
 #logenv<-new.env();
-pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,sims=ptpnl_simsumm);
+# adding on another boundary, representing a 5-year (60 mo) difference in 3rd quantile of survival curves
+pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,dff5=update(ptpnl_diff,cutoff=60),sims=ptpnl_simsumm);
 tol<-0.05;
 .out <- powertrip(logenv #,refcoords=lrefcoords
                   ,refcoords = nnrefs
@@ -74,7 +75,7 @@ tol<-0.05;
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mnn')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.clean.nn')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.neglim')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.nglm5ysrv')
                   ,backtrans=exp,type='gm',tol=tol);
 
 
