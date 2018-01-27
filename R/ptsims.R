@@ -93,14 +93,18 @@ ptsim_surv <- function(coords,nn=100,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0
 #' checking here.
 ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1)
                      ,type=c('e','g','gm','lm'),...){
-  lc <- switch(match.arg(type),e=1,g=2,gm=3,lm=4); 
+  lc <- switch(type<-match.arg(type),e=1,g=2,gm=3,lm=4); 
   out <- NULL;
-  coords <- coords*refcoords; 
+  # the coords start out as offsets from the refcoords, and here they are 
+  # turned into actual values. The [lc+1] value is the sample size and is the same
+  # between the control/reference group and the treatment group
+  coords <- coords*refcoords; refcoords[lc+1] <- coords[lc+1];
   if(round(coords[lc+1])>=round(refcoords[lc+1])){
     # coords[lc+1] is shared as the sample size for both groups and apparently the 
     # proper co... what was I going to write here? Don't know. Darn.
     # TODO: replace cc with 
     # cc = sample(1:0,coords[lc+1],rep=T,prob=c(coords[lc+2],1-coords[lc+2]))
+    # TODO: add recruitment age (lc+2)
     out <- try(data.frame(group=rep(c('control','treated'),each=coords[lc+1])
                           ,yy=c(simsurv(coords[lc+1],type,refcoords[1:lc])
                                 ,simsurv(coords[lc+1],type,coords[1:lc]))
@@ -111,6 +115,33 @@ ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1)
     return(expand.grid(group=c('control','treated'),yy=-1,cc=-1));
   }
 }
+
+simsurvagenroll <- function(params,nn,agenroll=0,lc=length(params),type){
+  if(missing(type)) type <- switch(lc,'e','g','gm','lm');
+  shp <- if(agenroll>0) {
+    do.call(srvshp,c(x=agenroll,setNames(as.list(params),c('a','b','c','s')[1:lc]),model=type));
+  } else 1;
+  out <- simsurv(nn/shp,type,params)-agenroll;
+  while((ll<-length(out<-out[out>0]))<as.integer(nn)){
+    out<-c(out,simsurv((nn-ll)/shp,type,params));
+    };
+  sample(out,nn);
+}
+#' ## example... try recruiting at every month of age, 0 to 960
+# coords <- c(3.02495622562167e-06, 0.00766970877053115, 1.97042457165941e-05,30, 0, 20)'
+# lc<-3;
+# foo<-sapply(0:(80*12),function(ii) simsurvagenroll(coords[1:lc],1000,ii));
+# plot(survfit(Surv(foo[,1])~1),conf.int=F,las=1,yscale=100,bty='n',xscale=12
+#      ,xlab='Survival After Recruitment (years)',ylab='% Alive'
+#      ,main='Survival Curves at Various Recruitment Ages\n(red = 0, blue = 80)')
+# for(ii in 2:961) lines(survfit(Surv(foo[,ii])~1)
+#                        ,col=rainbow(961,start=0,end=4/6,alpha=0.2)[ii],conf.int=F); 
+#' or year of age
+# for(ii in seq(12,960,by=12)) lines(survfit(Surv(foo[,ii])~1)
+#                                    ,col=rainbow(961,start=0,end=4/6,alpha=0.7)[ii],conf.int=F)
+#' TODO: Replicate a bunch, run opsurv on each one, and discover relationship between hazard 
+#' param residuals and the age at recruitment
+
 #simsurv (n, type = "g", p = c(2.433083e-05, 0.005, 3e-11, 0.0015)) 
 #' The following works!
 #' 
