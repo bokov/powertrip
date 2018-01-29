@@ -91,24 +91,30 @@ ptsim_surv <- function(coords,nn=100,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0
 #' happen to work with Logistic-Makeham and are for demonstration purposes only. 
 #' Not going to slow down something that runs so often by putting in more input 
 #' checking here.
-ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1)
+ptsim_srvn <- function(coords,refcoords=c(2.433083e-05, 0.005, 3e-11, 0.0015,1,1)
                      ,type=c('e','g','gm','lm'),...){
   lc <- switch(type<-match.arg(type),e=1,g=2,gm=3,lm=4); 
   out <- NULL;
   # the coords start out as offsets from the refcoords, and here they are 
   # turned into actual values. The [lc+1] value is the sample size and is the same
   # between the control/reference group and the treatment group
-  coords <- coords*refcoords; refcoords[lc+1] <- coords[lc+1];
-  if(round(coords[lc+1])>=round(refcoords[lc+1])){
-    # coords[lc+1] is shared as the sample size for both groups and apparently the 
+  coords <- coords*refcoords;
+  if(all(round(coords[lc+1:2])>=round(refcoords[lc+1:2]))){
+    # sample size & probability of a non-censored event
+    refcoords[lc+1:2] <- coords[lc+1:2];
+    # coords[lc+1:2] is shared as the sample size for both groups and apparently the 
     # proper co... what was I going to write here? Don't know. Darn.
-    # TODO: replace cc with 
-    # cc = sample(1:0,coords[lc+1],rep=T,prob=c(coords[lc+2],1-coords[lc+2]))
-    # TODO: add recruitment age (lc+2)
-    out <- try(data.frame(group=rep(c('control','treated'),each=coords[lc+1])
-                          ,yy=c(simsurv(coords[lc+1],type,refcoords[1:lc])
-                                ,simsurv(coords[lc+1],type,coords[1:lc]))
-                          ,cc=1));
+    #cc <- sample(1:0,2*coords[lc+1],replace=T,prob=c(coords[lc+2],1-coords[lc+2]));
+    # TODO: add recruitment age (lc+3)
+    out <- try(data.frame(
+      group=rep(c('control','treated'),each=coords[lc+1])
+      ,yy=c(simsurv(refcoords[lc+1],type,refcoords[1:lc])
+            ,simsurv(coords[lc+1],type,coords[1:lc]))));
+    out <- try({
+      out$cc<-ifelse(out$yy<coords[lc+3]
+                     ,sample(1:0,2*coords[lc+1],replace=T,prob=c(coords[lc+2],1-coords[lc+2]))
+                     ,0);
+      });
   } else cat(' sim-err: N below minimum '); 
   if(is.data.frame(out)) return(out) else {
     if(is(out,'try-error')) cat(out[1]);
@@ -329,8 +335,19 @@ ptpnl_cx <- new.ptpnl('cx'
                       ,matchterm='grouptreated');
 
 ptpnl_gm <- new.ptpnl('gm'
-                      ,fit = list(h0=opsurv(x=data$yy[data$group==matchterm],y=data$yy[data$group!=matchterm],model='gm',tlog=T,par=c(3e-6,8e-3,2e-5,0),cons=c(0,0,0,0))
-                                ,h1=opsurv(x=data$yy[data$group==matchterm],y=data$yy[data$group!=matchterm],model='gm',tlog=T,par=c(3e-6,8e-3,2e-5,0)))
+                      ,fit = list(h0=opsurv(x=data$yy[data$group==matchterm]
+                                            ,y=data$yy[data$group!=matchterm]
+                                            ,cx=data$cc[data$group==matchterm]
+                                            ,cy=data$cc[data$group!=matchterm]
+                                            ,model='gm',tlog=T
+                                            ,par=c(3e-6,8e-3,2e-5,0)
+                                            ,cons=c(0,0,0,0))
+                                ,h1=opsurv(x=data$yy[data$group==matchterm]
+                                           ,y=data$yy[data$group!=matchterm]
+                                           ,cx=data$cc[data$group==matchterm]
+                                           ,cy=data$cc[data$group!=matchterm]
+                                           ,model='gm',tlog=T
+                                           ,par=c(3e-6,8e-3,2e-5,0)))
                       ,result = list(model=fit, detect=eval(eval.))
                       ,eval.= pchisq(2 * (fit$h1$maximum - fit$h0$maximum), df = 3,lower.tail = F) < psig
                       ,frm=Surv(yy)~group,psig=0.05

@@ -59,11 +59,18 @@ tol<-0.05;
 #' * Theory 1: the weighting toward distant radii in `make_phis()` is too strong, making it less extreme
 #'   will prevent the sample size parameter from dominating regions of the parameter space
 #' * Theory 2: this is some kind of geometrical unintended consequence of a very lopsided bounding box with respect
-#'   to the sample size parameter, so I need to make it symmetrical around the origin and conver it to an absolute
+#'   to the sample size parameter, so I need to make it symmetrical around the origin and convert it to an absolute
 #'   value inside `ptsim_survn()`
 #'   
 #'   Trying theory 1 first. Passing params through `powertrip()` to `make_phis()` to make the bias less extreme
-make_phis.topnbyzone <- c(1,1,1);
+#' 
+#' Nevermind! The above is a false alarm. I was using a variable in the wrong scope, and so wasn't really colouring
+#' and subsetting by the sample size paramter. The code works as written originally, and omitting the make_phis.*
+#' optional variables from the powertrip() invokation will use defaults that were used by the original code.
+#' Still, might keep this one running for a while to see how it compares with the more aggressive weighting. A 
+#' natural experiment.
+#make_phis.topnbyzone <- c(1,1,1);
+#make_phis.topn <- 200;
 .out <- powertrip(logenv #,refcoords=lrefcoords
                   ,refcoords = nnrefs
                   #,maxs=leftinterestingmaxs,mins=leftinterestingmins
@@ -89,7 +96,8 @@ make_phis.topnbyzone <- c(1,1,1);
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.180.nglm5ysrv')
                   ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.180.topn')
                   ,backtrans=exp,type='gm',tol=tol
-                  ,topnbyzone=make_phis.topnbyzone);
+                  #,topnbyzone=make_phis.topnbyzone
+                  );
 
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
