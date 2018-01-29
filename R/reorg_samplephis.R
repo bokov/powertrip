@@ -270,7 +270,12 @@ env_state <- function(logenv,coords='coords',summ='summ',fits='fits'
 #' Returns a data.frame of maxrads, phis, maxs, and mins unless keepfits=T
 make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
                       # how many of the generated phis to actually use?
-                      ,topn=round(npoints/2)
+                      ,topn=npoints/2 # how many of the npoints to actually simulate?
+                      ,topnbyzone=c(.1,.2,.7) # what proportion of each zone to keep should be same length as zoneqs
+                      ,zoneqs=c(0,.5,.75,1) # cut-points for zones (based on radius length)
+                      # if nkeep is specified directly, topn and topnbyzone will be ignored
+                      # but zoneqs is still needed and nkeep needs to be the same length as it
+                      ,nkeep=round(topn*topnbyzone[seq_along(zoneqs)]/sum(topnbyzone[seq_along(zoneqs)]))
                       # size of initial prediction interval for each set of phis 
                       ,numse=2
                       # if manually set to TRUE will bypass prediction even if 
@@ -320,10 +325,10 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
       ## instead of equally representing each quadrant, a more sensible approach is
       ## representing predicted distances from reference point in the desired proportions
       pmrads<-do.call(pmax,c(fp[,fnames],na.rm=T));
-      cuts<-cut(pmrads,quantile(pmrads,c(0,.5,.75,1),na.rm = T),include.lowest=T);
+      cuts<-cut(pmrads,quantile(pmrads,zoneqs,na.rm = T),include.lowest=T);
       # we no longer have to sample the same number from each bin
       # TODO: make this a parameter or config
-      nkeep <- round(topn*c(.1,.2,.7));
+      #nkeep <- round(topn*c(.1,.2,.7));
       filterkeep <- unsplit(mapply(
         function(xx,nn) if((nrxx<-nrow(xx))<=nn) {
           return(rep_len(T,nrxx)) } else {
@@ -806,7 +811,7 @@ powertrip<-function(logenv=logenv,refcoords
     actualpoints <- 0; phis <- c();
     while(actualpoints < 30){
       phis <- rbind(phis,make_phis(logenv=logenv,npoints = npoints,maxs=maxs,mins=mins
-                      ,nphis = nphis,numse = numse));
+                      ,nphis = nphis,numse = numse,...));
       # this seems to also get rid of NAs
       phis <- subset(phis,maxs>mins);
       if(!is(phis,'data.frame')||nrow(phis)<1||nrow(subset(phis,maxs<0|mins<0|maxs>maxrad))>0) {print('Jacked phis created!');browser();}

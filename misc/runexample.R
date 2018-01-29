@@ -53,6 +53,17 @@ nnptsim <- ptsim_srvn;
 # adding on another boundary, representing a 5-year (60 mo) difference in 3rd quantile of survival curves
 pnlst_fresh <- list(sr=ptpnl_sr,gm=ptpnl_gm,diff=ptpnl_diff,dff5=update(ptpnl_diff,cutoff=60),sims=ptpnl_simsumm);
 tol<-0.05;
+#' damndest thing! powertrip is visiting half the parameter space at low sample sizes and the other half at
+#' high sample sizes. Why?
+#' 
+#' * Theory 1: the weighting toward distant radii in `make_phis()` is too strong, making it less extreme
+#'   will prevent the sample size parameter from dominating regions of the parameter space
+#' * Theory 2: this is some kind of geometrical unintended consequence of a very lopsided bounding box with respect
+#'   to the sample size parameter, so I need to make it symmetrical around the origin and conver it to an absolute
+#'   value inside `ptsim_survn()`
+#'   
+#'   Trying theory 1 first. Passing params through `powertrip()` to `make_phis()` to make the bias less extreme
+make_phis.topnbyzone <- c(1,1,1);
 .out <- powertrip(logenv #,refcoords=lrefcoords
                   ,refcoords = nnrefs
                   #,maxs=leftinterestingmaxs,mins=leftinterestingmins
@@ -75,8 +86,10 @@ tol<-0.05;
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Moffctr')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%Mnn')
                   #,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.160.clean.nn')
-                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.180.nglm5ysrv')
-                  ,backtrans=exp,type='gm',tol=tol);
+                  #,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.180.nglm5ysrv')
+                  ,instance=as.character(Sys.time(),'i%y%m%d%I%M.30.180.topn')
+                  ,backtrans=exp,type='gm',tol=tol
+                  ,topnbyzone=make_phis.topnbyzone);
 
 
 # .out <- powertrip(logenv,refcoords=lrefcoords,maxs=lrelmaxs,mins=lrelmins
