@@ -275,7 +275,7 @@ make_phis <- function(logenv,npoints,maxs,mins,phiprefix='phi'
                       ,zoneqs=c(0,.5,.75,1) # cut-points for zones (based on radius length)
                       # if nkeep is specified directly, topn and topnbyzone will be ignored
                       # but zoneqs is still needed and nkeep needs to be the same length as it
-                      ,nkeep=round(topn*topnbyzone[seq_along(zoneqs)]/sum(topnbyzone[seq_along(zoneqs)]))
+                      ,nkeep=round(topn*topnbyzone[seq_len(length(zoneqs)-1)]/sum(topnbyzone[seq_len(length(zoneqs)-1)]))
                       # size of initial prediction interval for each set of phis 
                       ,numse=2
                       # if manually set to TRUE will bypass prediction even if 

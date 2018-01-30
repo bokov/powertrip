@@ -329,8 +329,19 @@ ptpnl_cx <- new.ptpnl('cx'
                       ,matchterm='grouptreated');
 
 ptpnl_gm <- new.ptpnl('gm'
-                      ,fit = list(h0=opsurv(x=data$yy[data$group==matchterm],y=data$yy[data$group!=matchterm],model='gm',tlog=T,par=c(3e-6,8e-3,2e-5,0),cons=c(0,0,0,0))
-                                ,h1=opsurv(x=data$yy[data$group==matchterm],y=data$yy[data$group!=matchterm],model='gm',tlog=T,par=c(3e-6,8e-3,2e-5,0)))
+                      ,fit = list(h0=opsurv(x=data$yy[data$group==matchterm]
+                                            ,y=data$yy[data$group!=matchterm]
+                                            ,cx=data$cc[data$group==matchterm]
+                                            ,cy=data$cc[data$group!=matchterm]
+                                            ,model='gm',tlog=T
+                                            ,par=c(3e-6,8e-3,2e-5,0)
+                                            ,cons=c(0,0,0,0))
+                                  ,h1=opsurv(x=data$yy[data$group==matchterm]
+                                             ,y=data$yy[data$group!=matchterm]
+                                             ,cx=data$cc[data$group==matchterm]
+                                             ,cy=data$cc[data$group!=matchterm]
+                                             ,model='gm',tlog=T
+                                             ,par=c(3e-6,8e-3,2e-5,0)))
                       ,result = list(model=fit, detect=eval(eval.))
                       ,eval.= pchisq(2 * (fit$h1$maximum - fit$h0$maximum), df = 3,lower.tail = F) < psig
                       ,frm=Surv(yy)~group,psig=0.05
