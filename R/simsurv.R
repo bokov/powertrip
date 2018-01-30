@@ -11,7 +11,7 @@ function(n,type='g',p=c(2.433083e-05,0.005,3e-11,0.0015)){
   if(type=='gm'){if(p[3]==0) type<-'g' else return(ceiling(rmakeham(n=n,shape=p[c(1,3)],scale=1/p[2])));}
   if(type=='g'){if(p[2]==0) type<-'e' else return(ceiling(rgompertz(n=n,scale=1/p[2],shape=p[1])));}
   if(type=='w'){if(p[2]==0) type<-'e' else return(ceiling(rweibull(n=n,scale=1/p[1],shape=p[2])));}
-  if(type=='e'){return(rexp(ceiling(n=n,rate=p[1])));}
+  if(type=='e'){return(rexp(n=n,rate=p[1]));}
   # next line added temporarily for testing out the new lm and l above
   if(type=='l.old') type<-'l'; if(type=='lm.old') type<-'lm';
   # the below is slower than the original, compiled method, but if a compiled version 

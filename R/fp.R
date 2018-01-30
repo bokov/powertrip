@@ -211,7 +211,9 @@ for(i in d$jointmodels){
   d$pers[i,2,2,2,2,'MLE',1]<-sum(d$unc[i,'MLE',]);
   ipars<-modpars(d$unc[i,c('a','b','c','s'),],modeli='lm',modelo=i,trim=T);
   for(j in 2:nrow(d$cons[[i]])){
-    jcons<-1+d$cons[[i]][j,]; dbg_jcons<<-jcons; dbg_dcons<<-d$cons[[i]][j,]
+    # don't know why I created dbg_jcons and dbg_dcons but getting rid of them to stop build warning
+    # and because assignment to .GlobalEnv considered harmful
+    jcons<-1+d$cons[[i]][j,]; #dbg_jcons<<-jcons; dbg_dcons<<-d$cons[[i]][j,]
     d$pers[i,jcons[1],jcons[2],jcons[3],jcons[4],'MLE',1]<-opsurv(d$x,d$y,i,ipars,jcons-1,cx=d$cx,cy=d$cy, tlog=d$tlog,verbose=verbose)$maximum;
 	# populate the degrees of freedom for original AND all permutations, since that information repeats
     d$pers[i,jcons[1],jcons[2],jcons[3],jcons[4],'df',]<- maxdf-sum(jcons-1);

@@ -84,7 +84,7 @@ and use the defaults.");}
 			#options(show.error.messages=T);
       if(class(out)[1]!="try-error"){
         totaliter<-out[[3]][1]+totaliter;
-        if(totaliter>giveup){
+        if(debug&&totaliter>giveup){
           save(list=ls(all.names=T),file=paste(as.numeric(Sys.time()),'opsurv.rdata',sep='.'));
           print('GIVING UP');
           return(out);
@@ -116,7 +116,7 @@ and use the defaults.");}
           ## Damn starting params! You have bested me, I surrender.
           if(verbose>0) cat('!');
           counter<-counter+1; if(counter>1e6){
-            if(interactive()) browser() else stop('param fail after 1e6 tries');
+            if(debug&&interactive()) browser() else stop('param fail after 1e6 tries');
           }
         }
         if(!is.na(lk)){out<-list(p);change<-1;} else {break;}
